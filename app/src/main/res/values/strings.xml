@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">Conecta4-proyFin</string>
+    <string name="instrucciones_completas">
+            **Objetivo:** Conecta cuatro fichas de tu color en línea recta (horizontal, vertical o diagonal) para ganar.\n\m
+
+            **Modo de Juego:** Los jugadores se turnan para dejar caer una ficha en cualquiera de las siete columnas.\n\n
+
+            **Extras (Tiempo):** Se puede activar un límite de tiempo por turno (ej. 10 segundos). Si se agota, se pasa el turno.\n\n
+
+            **Extras (Puntuación):** Se pueden ganar puntos por Conecta 4, Conecta 5, o por conectar dos líneas simultáneas.
+
+
+    </string>
 </resources>
