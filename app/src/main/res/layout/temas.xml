@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1C1C2E">
+
+    <TextView
+        android:id="@+id/tv_titulo_tema"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Selecciona un tema"
+        android:textColor="@android:color/white"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="20dp" />
+
+    <RadioGroup
+        android:id="@+id/grupo_temas"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        >
+
+        <RadioButton
+            android:id="@+id/rb_clasico"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Clasico"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"
+            />
+
+        <RadioButton
+            android:id="@+id/rb_neon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Neón"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"/>
+
+        <RadioButton
+            android:id="@+id/rb_personalizado"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Personalizado"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"/>
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/btn_guardar_tema"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Guardar"
+        android:layout_marginTop="30dp" />
+
+</LinearLayout>
