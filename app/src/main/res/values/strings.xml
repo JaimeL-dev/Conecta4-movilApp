@@ -1,3 +1,31 @@
 <resources>
     <string name="app_name">Conecta4-proyFin</string>
+    <string name="instrucciones_completas">
+            **Objetivo:** Conecta cuatro fichas de tu color en línea recta (horizontal, vertical o diagonal) para ganar.\n\m
+
+            **Modo de Juego:** Los jugadores se turnan para dejar caer una ficha en cualquiera de las siete columnas.\n\n
+
+            **Extras (Tiempo):** Se puede activar un límite de tiempo por turno (ej. 10 segundos). Si se agota, se pasa el turno.\n\n
+
+            **Extras (Puntuación):** Se pueden ganar puntos por Conecta 4, Conecta 5, o por conectar dos líneas simultáneas.
+
+
+    </string>
+    <string name="title_activity_main2">Leanback MainActivity2</string>
+    <string name="browse_title">Videos by Your Company</string>
+    <string name="related_movies">Related Videos</string>
+    <string name="grid_view">Grid View</string>
+    <string name="error_fragment">Error Fragment</string>
+    <string name="personal_settings">Personal Settings</string>
+    <string name="watch_trailer_1">Watch trailer</string>
+    <string name="watch_trailer_2">FREE</string>
+    <string name="rent_1">Rent By Day</string>
+    <string name="rent_2">From $1.99</string>
+    <string name="buy_1">Buy and Own</string>
+    <string name="buy_2">AT $9.99</string>
+    <string name="movie">Movie</string>
+
+    <!-- Error messages -->
+    <string name="error_fragment_message">An error occurred</string>
+    <string name="dismiss_error">Dismiss</string>
 </resources>
