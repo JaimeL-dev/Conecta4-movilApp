@@ -2,6 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="true" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -11,22 +20,26 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Conecta4proyFin">
-
-        <!-- Pantalla principal -->
+        <activity
+            android:name=".activity_instrucciones2"
+            android:exported="false" />
+        <activity
+            android:name=".activity_resultados2"
+            android:exported="false" />
+        <activity
+            android:name=".activity_records2"
+            android:exported="false" /> <!-- Pantalla principal -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-
-        <!-- Pantalla del tablero -->
-        <activity android:name=".TableroActivity" />
-
-        <!-- Pantalla de temas -->
+        </activity> <!-- Pantalla del tablero -->
+        <activity android:name=".TableroActivity" /> <!-- Pantalla de temas -->
         <activity android:name=".TemaActivity" />
-
     </application>
+
 </manifest>
