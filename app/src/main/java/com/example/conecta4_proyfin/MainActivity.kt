@@ -43,6 +43,21 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_temas).setOnClickListener {
             startActivity(Intent(this, TemaActivity::class.java))
         }
+        findViewById<Button>(R.id.btn_instrucciones).setOnClickListener {
+            // 1. Crea un Intent especificando el origen (this) y el destino (Activity::class.java)
+            val intentInstrucciones = Intent(this, activity_instrucciones2::class.java)
+
+            // 2. Ejecuta el Intent para iniciar la nueva pantalla
+            startActivity(intentInstrucciones)
+        }
+
+        findViewById<Button>(R.id.btn_records).setOnClickListener {
+            // 1. Crea un Intent especificando el origen (this) y el destino (Activity::class.java)
+            val intentRecords = Intent(this, activity_records2::class.java)
+
+            // 2. Ejecuta el Intent para iniciar la nueva pantalla
+            startActivity(intentRecords)
+        }
 
         findViewById<Button>(R.id.btn_salir).setOnClickListener {
             finish()
