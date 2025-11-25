@@ -1,1 +1,11 @@
-/build
+# Archivos y directorios de Gradle
+.gradle/
+/build/
+
+# Archivos y directorios del IDE (IntelliJ / Android Studio)
+.idea/
+
+# Archivos de caché del sistema operativo, si los hay (ej. macOS)
+.DS_Store
+
+.idea/
