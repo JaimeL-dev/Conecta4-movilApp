@@ -34,10 +34,10 @@
             />
 
         <RadioButton
-            android:id="@+id/rb_neon"
+            android:id="@+id/rb_casino"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Neón"
+            android:text="Casino"
             android:textSize="18sp"
             android:textColor="@android:color/white"/>
 

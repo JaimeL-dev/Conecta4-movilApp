@@ -15,10 +15,26 @@ class TemaActivity : AppCompatActivity() {
         val grupoTemas = findViewById<RadioGroup>(R.id.grupo_temas)
         val btnGuardar = findViewById<Button>(R.id.btn_guardar_tema)
 
+        // Obtener preferencias
+        val prefs = getSharedPreferences("config", MODE_PRIVATE)
+        val temaGuardado = prefs.getString("tema", "Clasico")
+
+        // Seleccionar en el RadioGroup el tema previo
+        when (temaGuardado) {
+            "Clasico"       -> grupoTemas.check(R.id.rb_clasico)
+            "Casino"          -> grupoTemas.check(R.id.rb_casino)
+            "Personalizado" -> grupoTemas.check(R.id.rb_personalizado)
+        }
+
+        // Guardar selección
         btnGuardar.setOnClickListener {
             val seleccion = grupoTemas.checkedRadioButtonId
+
             if (seleccion != -1) {
                 val tema = findViewById<RadioButton>(seleccion).text.toString()
+
+                prefs.edit().putString("tema", tema).apply()
+
                 Toast.makeText(this, "Tema seleccionado: $tema", Toast.LENGTH_SHORT).show()
                 finish()
             } else {
