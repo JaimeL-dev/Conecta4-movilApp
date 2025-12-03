@@ -18,7 +18,7 @@ object RecordSubmitter {
      * @param tiempoJuego Tiempo de partida en milisegundos.
      */
     fun submitRecord(context: Context, nombre: String, puntaje: Int, tiempoJuego: Long) {
-        if (puntaje <= 0) {
+        if (puntaje < 0) {
             Log.w("RecordSubmitter", "Puntaje inválido (<= 0). No se guardará el récord.")
             return
         }

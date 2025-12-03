@@ -19,7 +19,7 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
     private val textoModo = arrayOf(
         "MODO: TOUCH",
         "MODO: SENSOR CONTINUO",
-        "MODO: GESTO IZQ-DER + CAÍDA"
+        "MODO: GESTO IZQ-DER"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,15 +29,22 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         tableroView = findViewById(R.id.tableroView)
         btnModo = findViewById(R.id.btnModo)
 
-        // Sensor manager
+        // ================================
+        //      CARGAR TEMA SELECCIONADO
+        // ================================
+        val prefs = getSharedPreferences("config", MODE_PRIVATE)
+        val tema = prefs.getString("tema", "Clasico") ?: "Clasico"
+        tableroView.setTema(tema)
+
+        // SENSOR
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         sensorMovimiento = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
-        // Modo inicial
+        // MODO DE CONTROL INICIAL
         tableroView.modoControl = 0
         btnModo.text = textoModo[0]
 
-        // Cambiar entre TOUCH → SENSOR CONTINUO → GESTO
+        // BOTÓN PARA CAMBIAR DE MODO
         btnModo.setOnClickListener {
             tableroView.modoControl = (tableroView.modoControl + 1) % 3
             btnModo.text = textoModo[tableroView.modoControl]
@@ -46,6 +53,7 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         tableroView.iniciarJuego()
     }
 
+    // SENSOR LISTENER
     override fun onResume() {
         super.onResume()
         sensorManager.registerListener(
@@ -62,20 +70,10 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null) return
+        if (tableroView.modoControl == 0) return  // Modo touch → ignorar sensor
 
-        // No usar sensor en modo TOUCH
-        if (tableroView.modoControl == 0) return
-
-        /*******************************************************************
-         * Orientación del teléfono: vertical, pantalla hacia ti.
-         *
-         * event.values:
-         *   X → inclinación real izquierda/derecha
-         *   Y → inclinación arriba/abajo
-         *   Z → empujón hacia adelante (lo usamos para soltar la ficha)
-         *******************************************************************/
-        val ax = event.values[0]  // izquierda/derecha
-        val ay = event.values[2]  // gesto empujón hacia adelante (negativo)
+        val ax = event.values[0]   // izquierda / derecha real
+        val ay = event.values[2]   // golpe hacia adelante (gesto)
 
         tableroView.procesarSensor(ax, ay)
     }

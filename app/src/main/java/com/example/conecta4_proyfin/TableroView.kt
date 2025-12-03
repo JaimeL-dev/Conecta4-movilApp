@@ -10,14 +10,13 @@ import android.view.MotionEvent
 import android.view.View
 import android.animation.ValueAnimator
 import androidx.core.animation.addListener
-import kotlin.math.abs
 
 class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
     // ------------------------------------------------------------
     // MODOS DE CONTROL
     // ------------------------------------------------------------
-    var modoControl = 0 // 0=touch, 1=sensor, 2=gesto
+    var modoControl = 0 // 0=touch, 1=sensor continuo, 2=gesto
 
     // ------------------------------------------------------------
     // TABLERO
@@ -26,7 +25,9 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     private val columnas = 7
     private val tablero = Array(filas) { IntArray(columnas) { 0 } }
 
+    // Pintura para fichas canvas
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
     private var celdaSize = 0f
     private var radio = 0f
 
@@ -48,16 +49,19 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     // SENSORES
     // ------------------------------------------------------------
     private var columnaSeleccionada = 3
+
     private var filtroAX = 0f
-    private var filtroAY = 0f
     private val alpha = 0.15f
     private var tiempoUltMovimiento = 0L
     private var tiempoUltCaida = 0L
+
     private val COOLDOWN_MOV = 200L
-    private val COOLDOWN_CAIDA = 500L
+    private val COOLDOWN_CAIDA = 450L
+
     private val UMBRAL_CONTINUO = 1.6f
     private val UMBRAL_GESTO = 3.0f
     private val UMBRAL_NEUTRO = 1.2f
+
     private var gestoBloqueado = false
 
     // ------------------------------------------------------------
@@ -73,29 +77,42 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     private var imagenRojaScaled: Bitmap? = null
     private var imagenNegraScaled: Bitmap? = null
 
+    // ------------------------------------------------------------
+    // RECORDS
+    // ------------------------------------------------------------
+    private var movimientos1 = 0
+    private var movimientos2 = 0
+
+    private var inicioPartidaMs = 0L
+    private var duracionPartidaMs = 0L
+
     init {
-        sonidoFicha = try {
-            MediaPlayer.create(context, R.raw.ficha)
-        } catch (e: Exception) {
-            null
-        }
+        sonidoFicha = try { MediaPlayer.create(context, R.raw.ficha) } catch (e: Exception) { null }
 
         setLayerType(LAYER_TYPE_SOFTWARE, null)
 
         temaName = prefs.getString("tema", "Clasico") ?: "Clasico"
 
         cargarImagenes()
+
+        iniciarJuego()
     }
 
+    // ------------------------------------------------------------
+    // CARGA DE IMÁGENES
+    // ------------------------------------------------------------
     private fun cargarImagenes() {
-        try {
-            imagenRojaSrc = BitmapFactory.decodeResource(resources, R.drawable.ficha_roja)
-            imagenNegraSrc = BitmapFactory.decodeResource(resources, R.drawable.ficha_negra)
-        } catch (e: Exception) {
-            imagenRojaSrc = null
-            imagenNegraSrc = null
-        }
+        imagenRojaSrc = BitmapFactory.decodeResource(resources, R.drawable.ficha_roja)
+        imagenNegraSrc = BitmapFactory.decodeResource(resources, R.drawable.ficha_negra)
         escalarImagenes()
+    }
+
+    private fun escalarImagenes() {
+        if (celdaSize <= 0f) return
+
+        val size = (radio * 2).toInt().coerceAtLeast(1)
+        imagenRojaScaled = imagenRojaSrc?.let { Bitmap.createScaledBitmap(it, size, size, true) }
+        imagenNegraScaled = imagenNegraSrc?.let { Bitmap.createScaledBitmap(it, size, size, true) }
     }
 
     fun setTema(tema: String) {
@@ -111,24 +128,11 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         escalarImagenes()
     }
 
-    private fun escalarImagenes() {
-        if (celdaSize <= 0f) return
-        val size = (radio * 2).toInt().coerceAtLeast(1)
-
-        imagenRojaScaled =
-            imagenRojaSrc?.let { Bitmap.createScaledBitmap(it, size, size, true) }
-        imagenNegraScaled =
-            imagenNegraSrc?.let { Bitmap.createScaledBitmap(it, size, size, true) }
-    }
-
     // ------------------------------------------------------------
-    // DRAW
+    // DIBUJO
     // ------------------------------------------------------------
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
-        celdaSize = width.toFloat() / columnas
-        radio = celdaSize * 0.40f
 
         canvas.drawColor(Color.parseColor("#0044AA"))
 
@@ -140,10 +144,9 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
             if (temaName == "Clasico") {
                 dibujarFichaCanvas(canvas, cx, cy, turnoJugador, ghost = true)
             } else {
-                val bmp =
-                    if (turnoJugador == 1) imagenRojaScaled else imagenNegraScaled
-                if (bmp != null) {
-                    canvas.drawBitmap(bmp, cx - bmp.width / 2, cy - bmp.height / 2, null)
+                val img = if (turnoJugador == 1) imagenRojaScaled else imagenNegraScaled
+                if (img != null) {
+                    canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
                 } else {
                     dibujarFichaCanvas(canvas, cx, cy, turnoJugador, ghost = true)
                 }
@@ -155,49 +158,43 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
             for (c in 0 until columnas) {
                 val cx = c * celdaSize + celdaSize / 2
                 val cy = f * celdaSize + celdaSize / 2 + celdaSize
+
                 val jugador = tablero[f][c]
 
                 if (temaName == "Clasico") {
                     dibujarFichaCanvas(canvas, cx, cy, jugador, ghost = false)
                 } else {
-                    if (jugador == 0) {
-                        dibujarFichaCanvas(canvas, cx, cy, 0, false)
-                    } else {
-                        val bmp = if (jugador == 1) imagenRojaScaled else imagenNegraScaled
-                        if (bmp != null) {
-                            canvas.drawBitmap(bmp, cx - bmp.width / 2, cy - bmp.height / 2, null)
-                        } else {
-                            dibujarFichaCanvas(canvas, cx, cy, jugador, ghost = false)
-                        }
+                    val img = when (jugador) {
+                        1 -> imagenRojaScaled
+                        2 -> imagenNegraScaled
+                        else -> null
                     }
+
+                    if (img != null)
+                        canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
+                    else
+                        dibujarFichaCanvas(canvas, cx, cy, jugador, false)
                 }
             }
         }
 
-        // ANIMACIÓN
+        // FICHA ANIMADA
         if (animandoFicha) {
             val cx = animColumnaFinal * celdaSize + celdaSize / 2
             val cy = animYActual
+            val img = if (turnoJugador == 1) imagenRojaScaled else imagenNegraScaled
 
-            val bmp =
-                if (turnoJugador == 1) imagenRojaScaled else imagenNegraScaled
-
-            if (temaName == "Clasico" || bmp == null) {
-                dibujarFichaCanvas(canvas, cx, cy, turnoJugador, ghost = false)
+            if (temaName == "Clasico" || img == null) {
+                dibujarFichaCanvas(canvas, cx, cy, turnoJugador, false)
             } else {
-                canvas.drawBitmap(bmp, cx - bmp.width / 2, cy - bmp.height / 2, null)
+                canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
             }
         }
     }
 
-    private fun dibujarFichaCanvas(
-        canvas: Canvas,
-        cx: Float,
-        cy: Float,
-        jugador: Int,
-        ghost: Boolean
-    ) {
-        val baseColor = when (jugador) {
+    private fun dibujarFichaCanvas(canvas: Canvas, cx: Float, cy: Float, jugador: Int, ghost: Boolean) {
+
+        val colorBase = when (jugador) {
             1 -> Color.RED
             2 -> Color.YELLOW
             else -> Color.LTGRAY
@@ -208,7 +205,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         paint.shader = RadialGradient(
             cx, cy, radio,
             Color.WHITE,
-            baseColor,
+            colorBase,
             Shader.TileMode.CLAMP
         )
 
@@ -216,22 +213,16 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
 
         paint.shader = null
         paint.setShadowLayer(0f, 0f, 0f, 0)
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = (radio * 0.12f).coerceAtLeast(3f)
-        paint.color = Color.BLACK
-        canvas.drawCircle(cx, cy, radio, paint)
-
-        paint.style = Paint.Style.FILL
     }
 
     // ------------------------------------------------------------
-    // TOQUE
+    // TOUCH
     // ------------------------------------------------------------
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         if (event?.action == MotionEvent.ACTION_DOWN && !juegoTerminado) {
             when (modoControl) {
                 0 -> soltarFicha((event.x / celdaSize).toInt())
-                1 -> soltarFicha(columnaSeleccionada)
+                1 -> soltarFicha(columnaSeleccionada) // sensor continuo: toque = caída
             }
         }
         return true
@@ -243,36 +234,44 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     fun procesarSensor(ax: Float, ay: Float) {
         if (juegoTerminado || animandoFicha) return
 
-        val axCorr = -ax
+        val axCorr = -ax // SENSOR CORREGIDO (invertido)
+
         filtroAX += alpha * (axCorr - filtroAX)
-        filtroAY += alpha * (ay - filtroAY)
 
         val ahora = System.currentTimeMillis()
-        val deltaAY = ay - filtroAY
 
         when (modoControl) {
+
+            // SENSOR CONTINUO
             1 -> {
                 if (ahora - tiempoUltMovimiento > COOLDOWN_MOV) {
-                    if (filtroAX < -UMBRAL_CONTINUO) moverIzquierda()
-                    else if (filtroAX > UMBRAL_CONTINUO) moverDerecha()
+                    when {
+                        filtroAX < -UMBRAL_CONTINUO -> moverIzquierda()
+                        filtroAX > UMBRAL_CONTINUO -> moverDerecha()
+                    }
                     tiempoUltMovimiento = ahora
                 }
             }
 
+            // GESTO
             2 -> {
                 if (!gestoBloqueado) {
-                    if (filtroAX < -UMBRAL_GESTO) {
-                        moverIzquierda()
-                        gestoBloqueado = true
-                    } else if (filtroAX > UMBRAL_GESTO) {
-                        moverDerecha()
-                        gestoBloqueado = true
+                    when {
+                        filtroAX < -UMBRAL_GESTO -> {
+                            moverIzquierda()
+                            gestoBloqueado = true
+                        }
+                        filtroAX > UMBRAL_GESTO -> {
+                            moverDerecha()
+                            gestoBloqueado = true
+                        }
                     }
                 }
 
-                if (filtroAX in -UMBRAL_NEUTRO..UMBRAL_NEUTRO) gestoBloqueado = false
+                if (filtroAX in -UMBRAL_NEUTRO..UMBRAL_NEUTRO)
+                    gestoBloqueado = false
 
-                if (deltaAY < -6.5f && ahora - tiempoUltCaida > COOLDOWN_CAIDA) {
+                if (ay < -6f && ahora - tiempoUltCaida > COOLDOWN_CAIDA) {
                     soltarFicha(columnaSeleccionada)
                     tiempoUltCaida = ahora
                 }
@@ -291,7 +290,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     }
 
     // ------------------------------------------------------------
-    // ANIMACIÓN + LÓGICA
+    // LÓGICA DEL JUEGO + ANIMACIÓN
     // ------------------------------------------------------------
     private fun animarFicha(f: Int, c: Int, onEnd: () -> Unit) {
         animandoFicha = true
@@ -300,21 +299,22 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
 
         val yIni = celdaSize / 2f
         val yFin = f * celdaSize + celdaSize / 2f + celdaSize
+
         animYActual = yIni
 
-        val animator = ValueAnimator.ofFloat(yIni, yFin)
-        animator.duration = DURACION_ANIM
+        val anim = ValueAnimator.ofFloat(yIni, yFin)
+        anim.duration = DURACION_ANIM
 
-        animator.addUpdateListener {
+        anim.addUpdateListener {
             animYActual = it.animatedValue as Float
             invalidate()
         }
 
-        animator.addListener(onEnd = {
+        anim.addListener(onEnd = {
             onEnd()
         })
 
-        animator.start()
+        anim.start()
     }
 
     fun soltarFicha(columna: Int) {
@@ -338,18 +338,26 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
                             mostrarEmpate()
                         }
                         else -> {
-                            turnoJugador = if (turnoJugador == 1) 2 else 1
+                            // CAMBIO DE TURNO CORRECTO
+                            if (turnoJugador == 1) {
+                                movimientos1++
+                                turnoJugador = 2
+                            } else {
+                                movimientos2++
+                                turnoJugador = 1
+                            }
                         }
                     }
-
                     invalidate()
                 }
-
                 break
             }
         }
     }
 
+    // ------------------------------------------------------------
+    // VICTORIA / EMPATE
+    // ------------------------------------------------------------
     private fun verificarVictoria(f: Int, c: Int): Boolean {
         val jugador = tablero[f][c]
         val dirs = listOf(0 to 1, 1 to 0, 1 to 1, 1 to -1)
@@ -367,6 +375,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         var ff = f + df
         var cc = c + dc
         var total = 0
+
         while (ff in 0 until filas && cc in 0 until columnas && tablero[ff][cc] == jugador) {
             total++
             ff += df
@@ -375,11 +384,31 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         return total
     }
 
-    private fun verificarEmpate(): Boolean =
-        tablero[0].none { it == 0 }
+    private fun verificarEmpate() =
+        tablero[0].all { it != 0 }
 
     private fun mostrarGanador(jugador: Int) {
-        val color = if (jugador == 1) "Rojo 🔴" else "Negro ⚫"
+
+        duracionPartidaMs = System.currentTimeMillis() - inicioPartidaMs
+
+        val color: String
+        val movimientosTot = if (jugador == 1) movimientos1 else movimientos2
+
+        color = when {
+            temaName == "Clasico" && jugador == 1 -> "Rojo 🔴"
+            temaName == "Clasico" && jugador == 2 -> "Amarillo 🟡"
+            jugador == 1 -> "Rojo 🔴"
+            else -> "Negro ⚫"
+        }
+
+        val nombreJugador = "Jugador $color"
+
+        RecordSubmitter.submitRecord(
+            context = context,
+            nombre = nombreJugador,
+            puntaje = movimientosTot+1,
+            tiempoJuego = duracionPartidaMs
+        )
 
         AlertDialog.Builder(context)
             .setTitle("¡Ganador!")
@@ -398,7 +427,11 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
             .show()
     }
 
+    // ------------------------------------------------------------
+    // REINICIAR
+    // ------------------------------------------------------------
     private fun reiniciarJuego() {
+
         for (f in 0 until filas)
             for (c in 0 until columnas)
                 tablero[f][c] = 0
@@ -408,8 +441,15 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         animandoFicha = false
         columnaSeleccionada = 3
 
+        movimientos1 = 0
+        movimientos2 = 0
+
+        inicioPartidaMs = System.currentTimeMillis()
+
         invalidate()
     }
 
-    fun iniciarJuego() {}
+    fun iniciarJuego() {
+        inicioPartidaMs = System.currentTimeMillis()
+    }
 }
