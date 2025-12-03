@@ -23,7 +23,7 @@ class TemaActivity : AppCompatActivity() {
         when (temaGuardado) {
             "Clasico"       -> grupoTemas.check(R.id.rb_clasico)
             "Casino"          -> grupoTemas.check(R.id.rb_casino)
-            "Personalizado" -> grupoTemas.check(R.id.rb_personalizado)
+            "Minimalista" -> grupoTemas.check(R.id.rb_minimalista)
         }
 
         // Guardar selección

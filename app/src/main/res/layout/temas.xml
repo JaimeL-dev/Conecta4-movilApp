@@ -42,10 +42,10 @@
             android:textColor="@android:color/white"/>
 
         <RadioButton
-            android:id="@+id/rb_personalizado"
+            android:id="@+id/rb_minimalista"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Personalizado"
+            android:text="Minimalista"
             android:textSize="18sp"
             android:textColor="@android:color/white"/>
     </RadioGroup>

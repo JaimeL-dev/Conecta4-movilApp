@@ -144,11 +144,19 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
             if (temaName == "Clasico") {
                 dibujarFichaCanvas(canvas, cx, cy, turnoJugador, ghost = true)
             } else {
-                val img = if (turnoJugador == 1) imagenRojaScaled else imagenNegraScaled
-                if (img != null) {
-                    canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
-                } else {
-                    dibujarFichaCanvas(canvas, cx, cy, turnoJugador, ghost = true)
+                if(temaName =="Minimalista"){
+                    paint.shader = null
+                    paint.style = Paint.Style.STROKE
+                    paint.strokeWidth = 6f
+                    paint.color = Color.BLACK
+                    dibujarFichaCanvas(canvas, cx, cy, turnoJugador, ghost = false)
+                }else{
+                    val img = if (turnoJugador == 1) imagenRojaScaled else imagenNegraScaled
+                    if (img != null) {
+                        canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
+                    } else {
+                        dibujarFichaCanvas(canvas, cx, cy, turnoJugador, ghost = true)
+                    }
                 }
             }
         }
@@ -163,19 +171,34 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
 
                 if (temaName == "Clasico") {
                     dibujarFichaCanvas(canvas, cx, cy, jugador, ghost = false)
+
                 } else {
-                    val img = when (jugador) {
-                        1 -> imagenRojaScaled
-                        2 -> imagenNegraScaled
-                        else -> null
+                    if(temaName =="Minimalista"){
+                        paint.shader = null
+                        paint.style = Paint.Style.STROKE
+                        paint.strokeWidth = 6f
+                        paint.color = Color.BLACK
+                        dibujarFichaCanvas(canvas, cx, cy, jugador, ghost = false)
+                    }else{
+                        val img = when (jugador) {
+                            1 -> imagenRojaScaled
+                            2 -> imagenNegraScaled
+                            else -> null
+                        }
+
+                        if (img != null)
+                            canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
+                        else
+                            dibujarFichaCanvas(canvas, cx, cy, jugador, false)
+
                     }
 
-                    if (img != null)
-                        canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
-                    else
-                        dibujarFichaCanvas(canvas, cx, cy, jugador, false)
                 }
+
             }
+
+
+
         }
 
         // FICHA ANIMADA
@@ -187,7 +210,16 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
             if (temaName == "Clasico" || img == null) {
                 dibujarFichaCanvas(canvas, cx, cy, turnoJugador, false)
             } else {
-                canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
+                if(temaName == "Minimalista"){
+                    paint.shader = null
+                    paint.style = Paint.Style.STROKE
+                    paint.strokeWidth = 6f
+                    paint.color = Color.BLACK
+                    dibujarFichaCanvas(canvas, cx, cy, turnoJugador, ghost = false)
+                }else{
+                    canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
+                }
+
             }
         }
     }
@@ -209,10 +241,11 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
             Shader.TileMode.CLAMP
         )
 
+
         canvas.drawCircle(cx, cy, radio, paint)
 
         paint.shader = null
-        paint.setShadowLayer(0f, 0f, 0f, 0)
+        paint.setShadowLayer(1f, 0f, 0f, Color.WHITE)
     }
 
     // ------------------------------------------------------------
@@ -397,6 +430,8 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         color = when {
             temaName == "Clasico" && jugador == 1 -> "Rojo 🔴"
             temaName == "Clasico" && jugador == 2 -> "Amarillo 🟡"
+            temaName == "Minimalista" && jugador == 1 -> "Rojo 🔴"
+            temaName == "Minimalista" && jugador == 2 -> "Amarillo 🟡"
             jugador == 1 -> "Rojo 🔴"
             else -> "Negro ⚫"
         }
