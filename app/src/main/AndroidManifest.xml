@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -20,6 +24,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Conecta4proyFin">
+        <activity
+            android:name=".unirsePartida"
+            android:exported="false" />
+        <activity
+            android:name=".crearPartida"
+            android:exported="false" />
+        <activity
+            android:name=".menuMulti"
+            android:exported="false" />
         <activity
             android:name=".activity_instrucciones2"
             android:exported="false" />

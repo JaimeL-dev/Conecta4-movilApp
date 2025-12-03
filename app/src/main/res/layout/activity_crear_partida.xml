@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#101020"
+    android:padding="32dp">
+
+    <FrameLayout
+        android:id="@+id/contenedorAnimacion"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <TextView
+        android:id="@+id/tv_titulo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="100dp"
+        android:text="Esperando oponente..."
+        android:textColor="@android:color/white"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_below="@id/tv_titulo"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="50dp"
+        android:indeterminate="true"
+        android:indeterminateTint="#008080" /> <TextView
+    android:id="@+id/tv_ip_address"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_below="@id/progressBar"
+    android:layout_centerHorizontal="true"
+    android:layout_marginTop="40dp"
+    android:text="Tu IP: Cargando..."
+    android:textColor="#FFFFFF"
+    android:textSize="18sp" />
+
+    <TextView
+        android:id="@+id/tv_instruccion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tv_ip_address"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:text="Pídele a tu amigo que use la opción 'Unirse a partida' y esta IP."
+        android:textColor="#AAAAAA"
+        android:textSize="14sp" />
+
+    <Button
+        android:id="@+id/btn_cancelar_servidor"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:text="Cancelar"
+        android:backgroundTint="#FF5555" />
+
+</RelativeLayout>

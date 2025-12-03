@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#101020"
+    android:padding="32dp">
+
+    <FrameLayout
+        android:id="@+id/contenedorAnimacion"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <TextView
+        android:id="@+id/tv_titulo_cliente"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="100dp"
+        android:text="Buscando partidas disponibles..."
+        android:textColor="@android:color/white"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <ProgressBar
+        android:id="@+id/progressBarCliente"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_below="@id/tv_titulo_cliente"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="50dp"
+        android:indeterminate="true"
+        android:indeterminateTint="#008080" />
+
+    <TextView
+        android:id="@+id/tv_estado_cliente"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/progressBarCliente"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="40dp"
+        android:text="Escuchando en red local..."
+        android:textColor="#FFFFFF"
+        android:textSize="18sp" />
+
+    <Button
+        android:id="@+id/btn_cancelar_cliente"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:text="Cancelar Búsqueda"
+        android:backgroundTint="#FF5555" />
+
+</RelativeLayout>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/menu_multi"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#101020">
+
+    <FrameLayout
+        android:id="@+id/contenedorAnimacion"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageView
+        android:id="@+id/logo"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="100dp"
+        android:src="@drawable/c4" />
+
+    <LinearLayout
+        android:id="@+id/menuPartida"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_below="@id/logo"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="60dp">
+
+        <Button
+            android:id="@+id/btn_crear_partida"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Crear partida"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/btn_unirse_partida"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Unirse a partida"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/btn_volver"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Volver" />
+
+    </LinearLayout>
+</RelativeLayout>

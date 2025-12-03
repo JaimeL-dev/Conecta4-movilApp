@@ -35,8 +35,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btn_dos_jugadores).setOnClickListener {
-            val intent = Intent(this, TableroActivity::class.java)
-            intent.putExtra("modo", "dos_jugadores")
+            val intent = Intent(this, menuMulti::class.java)
+            intent.putExtra("modo", "multijugador_online")
             startActivity(intent)
         }
 
