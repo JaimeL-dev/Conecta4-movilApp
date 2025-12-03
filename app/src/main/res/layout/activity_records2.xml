@@ -2,9 +2,12 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#BBDEFB" android:padding="20dp">
+    android:background="#BBDEFB"
+    android:padding="20dp"
+    tools:context=".activity_records2">
 
     <TextView
         android:id="@+id/tv_titulo_records"
@@ -13,7 +16,8 @@
         android:text="RÉCORDS Y ESTADÍSTICAS"
         android:textSize="28sp"
         android:textStyle="bold"
-        android:textColor="#1A237E" app:layout_constraintTop_toTopOf="parent"
+        android:textColor="#1A237E"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="30dp"/>
@@ -28,41 +32,16 @@
         android:layout_marginTop="30dp"
         android:scrollbars="none">
 
+        <!-- ESTE CONTENEDOR ES LLENADO DINÁMICAMENTE POR activity_records2.kt -->
         <LinearLayout
             android:id="@+id/ll_lista_records"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="6dp"
-                app:cardBackgroundColor="#FFFFFF"> <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="🏆 MENOS MOVIMIENTOS: Jaime - 25"
-                android:textSize="18sp"
-                android:textColor="#1A237E" android:padding="16dp"/>
-            </androidx.cardview.widget.CardView>
-
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="6dp"
-                app:cardBackgroundColor="#FFFFFF">
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="🚀 MÁS RÁPIDO: Adal - 1:15 min"
-                    android:textSize="18sp"
-                    android:textColor="#1A237E"
-                    android:padding="16dp"/>
-            </androidx.cardview.widget.CardView>
+            <!-- Las CardViews de ejemplo se han ELIMINADO.
+                 Si el archivo JSON está vacío, se mostrará un mensaje.
+                 Si hay récords, se generarán CardViews aquí. -->
 
         </LinearLayout>
     </ScrollView>
@@ -75,7 +54,8 @@
         android:textSize="18sp"
         android:paddingVertical="14dp"
         android:textColor="#1A237E"
-        android:backgroundTint="#FFB300" app:cornerRadius="18dp"
+        android:backgroundTint="#FFB300"
+        app:cornerRadius="18dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
