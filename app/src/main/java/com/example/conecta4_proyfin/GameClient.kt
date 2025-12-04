@@ -12,11 +12,12 @@ import java.net.Socket
 
 class GameClient(
     private val onMessageReceived: (Int, String) -> Unit, // (Columna, Estado)
-    private val onConnected: () -> Unit,
+    private val onConnected: (String) -> Unit, // CAMBIO: Ahora devuelve la IP
     private val onError: (String) -> Unit
 ) {
 
-    private val udpPort = 4445 // Debe coincidir con el servidor
+    private val udpPort = 4445
+    private val tcpPort = 8080 // Puerto fijo del servidor
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private var socket: Socket? = null
@@ -25,45 +26,43 @@ class GameClient(
 
     private var isListening = true
 
-    fun start() {
-        searchServerAndConnect()
+    // CAMBIO: start acepta IP opcional
+    fun start(serverIp: String? = null) {
+        isListening = true // Reiniciar flag
+        if (serverIp != null) {
+            // Si ya tenemos IP, conectamos directo (Reconexión rápida)
+            connectTcpWithRetry(serverIp)
+        } else {
+            // Si no, buscamos por UDP (Primera vez)
+            searchServerAndConnect()
+        }
     }
 
-    // --- PARTE A: ESCUCHA UDP (Buscando al Servidor) ---
+    // --- PARTE A: ESCUCHA UDP ---
     private fun searchServerAndConnect() = scope.launch {
         try {
-            // Abrimos socket UDP para escuchar en el puerto 4445
             DatagramSocket(null).use { udpSocket ->
                 udpSocket.reuseAddress = true
                 udpSocket.bind(InetSocketAddress(udpPort))
-                // Timeout para no quedarse pegado eternamente si no hay server (opcional)
-                // udpSocket.soTimeout = 15000
 
                 val buffer = ByteArray(1024)
                 val packet = DatagramPacket(buffer, buffer.size)
 
                 while (isListening && socket == null) {
                     try {
-                        // Bloquea hasta recibir paquete
                         udpSocket.receive(packet)
-
                         val message = String(packet.data, 0, packet.length)
 
-                        // Validamos que sea NUESTRO servidor y no otro paquete random
                         if (message.startsWith("CONECTA4_HOST")) {
-                            // Formato esperado: "CONECTA4_HOST:IP_SERVIDOR:PUERTO"
                             val parts = message.split(":")
-                            if (parts.size == 3) {
+                            if (parts.size >= 2) {
                                 val serverIp = parts[1]
-                                val serverPort = parts[2].toInt()
-
-                                // ¡Encontrado! Detenemos búsqueda y conectamos TCP
-                                connectTcp(serverIp, serverPort)
+                                // Encontramos servidor, intentamos conectar TCP
+                                connectTcpWithRetry(serverIp)
                                 break
                             }
                         }
                     } catch (e: Exception) {
-                        // Errores de timeout o red en el discovery
                         if (isActive) continue
                     }
                 }
@@ -73,24 +72,38 @@ class GameClient(
         }
     }
 
-    // --- PARTE B: CONEXIÓN TCP Y JUEGO ---
-    private suspend fun connectTcp(ip: String, port: Int) {
-        try {
-            socket = Socket(ip, port)
+    // --- PARTE B: CONEXIÓN TCP CON REINTENTOS ---
+    private fun connectTcpWithRetry(ip: String) = scope.launch {
+        var intentos = 0
+        var conectado = false
 
-            output = PrintWriter(OutputStreamWriter(socket!!.getOutputStream()), true)
-            input = BufferedReader(InputStreamReader(socket!!.getInputStream()))
+        while (!conectado && intentos < 5 && isListening) {
+            try {
+                intentos++
+                socket = Socket()
+                // Timeout de conexión de 2 segundos
+                socket?.connect(InetSocketAddress(ip, tcpPort), 2000)
 
-            // Notificar a la UI que estamos conectados
-            // NOTA: Como el servidor empieza, aquí NO debes habilitar tu tablero.
-            // Solo muestra "Conectado. Esperando movimiento del anfitrión..."
-            withContext(Dispatchers.Main) { onConnected() }
+                // Si pasa la línea anterior, es que conectó
+                output = PrintWriter(OutputStreamWriter(socket!!.getOutputStream()), true)
+                input = BufferedReader(InputStreamReader(socket!!.getInputStream()))
 
-            // Entramos al bucle de espera de mensajes
-            listenForServerMoves()
+                conectado = true
 
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) { onError("No se pudo conectar al servidor: ${e.message}") }
+                // Notificar éxito y pasar la IP
+                withContext(Dispatchers.Main) { onConnected(ip) }
+
+                // Empezar a escuchar jugadas
+                listenForServerMoves()
+
+            } catch (e: Exception) {
+                // Si falla, esperamos 1 segundo y reintentamos
+                delay(1000)
+            }
+        }
+
+        if (!conectado && isListening) {
+            withContext(Dispatchers.Main) { onError("No se pudo conectar al servidor tras $intentos intentos.") }
         }
     }
 
@@ -101,33 +114,30 @@ class GameClient(
                 val message = input?.readLine()
 
                 if (message != null) {
-                    // Protocolo: "COLUMNA:ESTADO"
                     val parts = message.split(":")
                     if (parts.size == 2) {
                         val column = parts[0].toInt()
-                        val state = parts[1] // ej: "TU_TURNO", "PERDISTE"
-
+                        val state = parts[1]
                         withContext(Dispatchers.Main) {
                             onMessageReceived(column, state)
                         }
                     }
                 } else {
-                    // Server cerró conexión
                     isListening = false
                     withContext(Dispatchers.Main) { onError("El servidor se desconectó") }
                 }
             }
         } catch (e: Exception) {
-            withContext(Dispatchers.Main) { onError("Error recibiendo jugada: ${e.message}") }
+            if (isListening) {
+                withContext(Dispatchers.Main) { onError("Error recibiendo jugada: ${e.message}") }
+            }
         }
     }
 
-    // --- ENVIAR MI TURNO AL SERVIDOR ---
-    // Llamar a esto cuando el Cliente toca su pantalla (solo si es su turno)
+    // --- ENVIAR MI TURNO ---
     fun sendMove(column: Int, gameState: String) {
         scope.launch {
             try {
-                // Formato: "4:TU_TURNO"
                 output?.println("$column:$gameState")
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { onError("Error enviando jugada") }
@@ -137,7 +147,9 @@ class GameClient(
 
     fun stop() {
         isListening = false
-        socket?.close()
+        try {
+            socket?.close()
+        } catch (e: Exception) { e.printStackTrace() }
         scope.cancel()
     }
 }

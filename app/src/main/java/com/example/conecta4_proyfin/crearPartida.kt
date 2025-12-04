@@ -7,7 +7,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
-// Nombre de la clase ajustado a 'crearPartida'
 class crearPartida : AppCompatActivity() {
 
     private lateinit var gameServer: GameServer
@@ -15,7 +14,6 @@ class crearPartida : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Asegúrate de que el layout anterior se llama activity_crear_partida.xml
         setContentView(R.layout.activity_crear_partida)
 
         tvIpAddress = findViewById(R.id.tv_ip_address)
@@ -25,7 +23,7 @@ class crearPartida : AppCompatActivity() {
         gameServer = GameServer(
             onMessageReceived = { _, _ -> /* Lógica para después de empezar el juego */ },
             onClientConnected = {
-                // !!! ESTO SE EJECUTA CUANDO SE ENCUENTRA UN CLIENTE !!!
+                // Cuando el cliente se conecta, cambiamos de pantalla
                 handleClientConnected()
             },
             onError = { errorMessage ->
@@ -34,7 +32,8 @@ class crearPartida : AppCompatActivity() {
         )
 
         // 1. Mostrar la IP inmediatamente
-        tvIpAddress.text = "Tu IP: ${gameServer.myIpAddress}"
+        val ip = gameServer.myIpAddress
+        tvIpAddress.text = if (ip.isNotEmpty()) "Tu IP: $ip" else "No conectado a Wi-Fi"
 
         // 2. Iniciar el Servidor (búsqueda de cliente)
         gameServer.start()
@@ -50,21 +49,29 @@ class crearPartida : AppCompatActivity() {
      */
     private fun handleClientConnected() {
         runOnUiThread {
-            Toast.makeText(this, "¡Oponente conectado! Iniciando partida...", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "¡Oponente conectado! Iniciando...", Toast.LENGTH_SHORT).show()
 
-            // TODO: Cambiar TableroActivity por la clase real de tu tablero de juego
+            // 1. DETENER EL SERVIDOR ANTIGUO YA MISMO
+            // Esto cierra el puerto 8080 en esta pantalla
+            gameServer.stop()
+
+            // 2. Iniciar la nueva pantalla
             val intent = Intent(this, TableroActivity::class.java).apply {
-                putExtra("es_servidor", true)
+                putExtra("extra_modo", "server")
             }
             startActivity(intent)
-            finish() // Cierra esta Activity
+
+            // 3. Cerrar esta pantalla
+            finish()
         }
     }
-
     private fun handleServerError(errorMessage: String) {
         runOnUiThread {
-            Toast.makeText(this, "Error de servidor: $errorMessage", Toast.LENGTH_LONG).show()
-            finish()
+            // Filtramos errores si ya estamos saliendo
+            if (!isFinishing) {
+                Toast.makeText(this, "Error: $errorMessage", Toast.LENGTH_LONG).show()
+                finish()
+            }
         }
     }
 
@@ -76,7 +83,10 @@ class crearPartida : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Asegurarse de que el servidor se detenga si la Activity se destruye
-        gameServer.stop()
+        // Asegurarse de cerrar el puerto para evitar el error EADDRINUSE
+        // al abrir TableroActivity inmediatamente después.
+        if (::gameServer.isInitialized) {
+            gameServer.stop()
+        }
     }
 }

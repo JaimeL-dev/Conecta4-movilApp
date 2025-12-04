@@ -14,78 +14,66 @@ class unirsePartida : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Usamos el layout de búsqueda de partida
         setContentView(R.layout.activity_unirse_partida)
 
         tvEstadoCliente = findViewById(R.id.tv_estado_cliente)
         val btnCancelar = findViewById<Button>(R.id.btn_cancelar_cliente)
 
-        // Inicializar el cliente y sus callbacks
+        // Inicializar el cliente para ESCANEO UDP
         gameClient = GameClient(
-            onMessageReceived = { _, _ -> /* Lógica para después de empezar el juego */ },
-            onConnected = {
-                // !!! ESTO SE EJECUTA CUANDO SE CONECTA AL SERVIDOR TCP !!!
-                handleServerFoundAndConnected()
+            onMessageReceived = { _, _ -> },
+            onConnected = { serverIp ->
+                // ¡Conectado! Pasamos la IP encontrada a la siguiente pantalla
+                handleServerFoundAndConnected(serverIp)
             },
             onError = { errorMessage ->
                 handleClientError(errorMessage)
             }
         )
 
-        // 1. Iniciar la búsqueda del servidor UDP
-        tvEstadoCliente.text = "Escuchando en red local..."
+        // Iniciar búsqueda UDP (sin IP específica)
+        tvEstadoCliente.text = "Buscando partida en red local..."
         gameClient.start()
 
-        // 2. Configurar el botón de cancelar
         btnCancelar.setOnClickListener {
             handleCancelar()
         }
     }
 
-    /**
-     * Se llama cuando el GameClient se conecta exitosamente al servidor.
-     */
-    private fun handleServerFoundAndConnected() {
-        // Ejecutamos esto en el hilo principal (UI thread)
+    private fun handleServerFoundAndConnected(serverIp: String) {
         runOnUiThread {
-            Toast.makeText(this, "Conectado al anfitrión. Iniciando partida...", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Anfitrión encontrado ($serverIp). Entrando...", Toast.LENGTH_SHORT).show()
 
-            // TODO: Cambiar TableroActivity por la clase real de tu tablero de juego
             val intent = Intent(this, TableroActivity::class.java).apply {
-                putExtra("es_servidor", false) // Importante: Le dice al tablero que somos el cliente
+                putExtra("extra_modo", "cliente")
+                putExtra("extra_server_ip", serverIp) // <--- CLAVE: Enviamos la IP
             }
             startActivity(intent)
-            finish() // Cierra esta Activity para que el usuario no vuelva al lobby
+
+            // Cerramos esta actividad para liberar recursos y evitar volver atrás
+            finish()
         }
     }
 
-    /**
-     * Muestra un error si falla la conexión o la búsqueda.
-     */
     private fun handleClientError(errorMessage: String) {
         runOnUiThread {
-            // Actualizar la UI con el error
-            tvEstadoCliente.text = "Error: $errorMessage"
-            Toast.makeText(this, "Error de conexión: $errorMessage", Toast.LENGTH_LONG).show()
-
-            // Opcional: Permitir un pequeño tiempo para que el usuario vea el error antes de volver
-            // Luego, volvemos a la Activity anterior.
-            // finish()
+            if (!isFinishing) {
+                // tvEstadoCliente.text = "Error: $errorMessage"
+                // Opcional: mostrar error solo si es crítico
+            }
         }
     }
 
-    /**
-     * Detiene el cliente y vuelve a la pantalla anterior.
-     */
     private fun handleCancelar() {
         gameClient.stop()
         Toast.makeText(this, "Búsqueda cancelada.", Toast.LENGTH_SHORT).show()
-        finish() // Vuelve a la Activity anterior (menuMulti)
+        finish()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Asegurarse de que el cliente se detenga si la Activity se destruye
-        gameClient.stop()
+        if (::gameClient.isInitialized) {
+            gameClient.stop()
+        }
     }
 }

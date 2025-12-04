@@ -2,18 +2,17 @@ package com.example.conecta4_proyfin
 
 import kotlinx.coroutines.*
 import java.io.BufferedReader
-import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.io.PrintWriter
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.Inet4Address
 import java.net.InetAddress
-import java.net.InetSocketAddress // IMPORTANTE: Necesario para el bind
+import java.net.InetSocketAddress
+import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
-import java.net.Inet4Address
-import java.net.NetworkInterface
 import java.util.Collections
 
 class GameServer(
@@ -26,16 +25,15 @@ class GameServer(
     private val udpPort = 4445
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    // CORRECCIÓN 1: Definir serverSocket como variable de clase para poder cerrarlo en stop()
+    // Variable de clase para poder cerrar el socket desde stop()
     private var serverSocket: ServerSocket? = null
     private var clientSocket: Socket? = null
     private var output: PrintWriter? = null
     private var input: BufferedReader? = null
 
-    // 1. Obtener IP automáticamente
+    // Obtener IP automáticamente
     val myIpAddress: String = getLocalIpAddress()
 
-    // Variable para controlar el bucle de lectura
     private var isListening = true
 
     fun start() {
@@ -46,7 +44,7 @@ class GameServer(
     // --- PARTE A: ANUNCIO UDP ---
     private fun startUdpDiscovery() = scope.launch {
         if (myIpAddress.isEmpty()) {
-            withContext(Dispatchers.Main) { onError("No se encontró una IP válida (¿Estás conectado a WiFi?)") }
+            withContext(Dispatchers.Main) { onError("Sin red Wi-Fi") }
             return@launch
         }
 
@@ -58,110 +56,124 @@ class GameServer(
                 val broadcastAddress = InetAddress.getByName("255.255.255.255")
                 val packet = DatagramPacket(buffer, buffer.size, broadcastAddress, udpPort)
 
-                while (isListening && clientSocket == null) { // Dejar de anunciar si alguien se conecta
-                    socket.send(packet)
-                    delay(2000)
+                while (isListening && clientSocket == null) {
+                    try {
+                        socket.send(packet)
+                        delay(2000)
+                    } catch (e: Exception) {
+                        if (isActive) delay(2000)
+                    }
                 }
             }
         } catch (e: Exception) {
-            // Manejo de errores silencioso para el discovery
+            // Ignorar errores de UDP si falla el bind
         }
     }
 
-    // --- PARTE B: SERVIDOR TCP Y JUEGO ---
+    // --- PARTE B: SERVIDOR TCP (AQUÍ ESTÁ LA SOLUCIÓN) ---
+    // --- PARTE B: SERVIDOR TCP CON REINTENTOS DE BIND ---
     private fun startTcpServer() = scope.launch {
-        try {
-            // CORRECCIÓN 2: Configuración para reutilizar el puerto inmediatamente
-            val server = ServerSocket()
-            server.reuseAddress = true // Evita el error EADDRINUSE
-            server.bind(InetSocketAddress(tcpPort))
+        var bindExitoso = false
+        var intentos = 0
 
-            // Guardamos la referencia en la variable de clase
-            this@GameServer.serverSocket = server
+        // Bucle para intentar ocupar el puerto si está "busy"
+        while (!bindExitoso && intentos < 10 && isListening) {
+            try {
+                // 1. Instanciar y configurar
+                val server = ServerSocket()
+                server.reuseAddress = true
 
-            server.use { validServerSocket ->
-                // Esperar al cliente
-                // Usamos validServerSocket que es el que acabamos de configurar
-                clientSocket = validServerSocket.accept()
+                // 2. Intentar atar al puerto
+                server.bind(InetSocketAddress(tcpPort))
 
-                // Configurar streams
-                output = PrintWriter(OutputStreamWriter(clientSocket!!.getOutputStream()), true)
-                input = BufferedReader(InputStreamReader(clientSocket!!.getInputStream()))
+                // Si pasa aquí, es que funcionó
+                bindExitoso = true
+                this@GameServer.serverSocket = server
 
-                // Notificar a la UI que el juego empieza
-                withContext(Dispatchers.Main) { onClientConnected() }
+                // 3. Comenzar a escuchar
+                server.use { validServerSocket ->
+                    // Log para depuración
+                    println("Servidor: Puerto $tcpPort abierto correctamente.")
 
-                // Iniciar bucle de escucha de mensajes del cliente
-                listenForClientMoves()
+                    clientSocket = validServerSocket.accept()
+
+                    output = PrintWriter(OutputStreamWriter(clientSocket!!.getOutputStream()), true)
+                    input = BufferedReader(InputStreamReader(clientSocket!!.getInputStream()))
+
+                    withContext(Dispatchers.Main) { onClientConnected() }
+
+                    listenForClientMoves()
+                }
+
+            } catch (e: Exception) {
+                // Si falla (EADDRINUSE), esperamos y reintentamos
+                intentos++
+                println("Servidor: Puerto ocupado, reintentando ($intentos/10)...")
+                try {
+                    // Cerrar el objeto fallido por si acaso
+                    serverSocket?.close()
+                } catch (ex: Exception) { }
+
+                delay(500) // Esperar medio segundo antes de probar otra vez
             }
-        } catch (e: Exception) {
-            // Si paramos el servidor manualmente, lanzará una excepción de socket cerrado,
-            // solo mostramos error si debíamos estar escuchando.
-            if (isListening) {
-                withContext(Dispatchers.Main) { onError("Error en servidor: ${e.message}") }
+        }
+
+        // Si después de 5 segundos sigue fallando:
+        if (!bindExitoso && isListening) {
+            withContext(Dispatchers.Main) {
+                onError("No se pudo liberar el puerto 8080. Reinicia la App.")
             }
         }
     }
-
-    // --- ESCUCHAR TURNOS DEL CLIENTE ---
+    // --- ESCUCHAR TURNOS ---
     private suspend fun listenForClientMoves() {
         try {
             while (isListening) {
-                // Bloqueante hasta recibir mensaje
                 val message = input?.readLine()
 
                 if (message != null) {
-                    // Protocolo esperado: "COLUMNA:ESTADO"
                     val parts = message.split(":")
                     if (parts.size == 2) {
                         val column = parts[0].toInt()
-                        val state = parts[1] // ej: "TU_TURNO", "GANASTE" (si el otro pierde)
-
-                        // Pasar a la UI en el hilo principal
+                        val state = parts[1]
                         withContext(Dispatchers.Main) {
                             onMessageReceived(column, state)
                         }
                     }
                 } else {
-                    // Null significa desconexión
                     isListening = false
                 }
             }
         } catch (e: Exception) {
             if (isListening) {
-                withContext(Dispatchers.Main) { onError("Error recibiendo datos: ${e.message}") }
+                withContext(Dispatchers.Main) { onError("Desconexión: ${e.message}") }
             }
         }
     }
 
-    // --- ENVIAR MI TURNO AL CLIENTE ---
     fun sendMove(column: Int, gameState: String) {
         scope.launch {
             try {
-                val messageToSend = "$column:$gameState"
-                output?.println(messageToSend)
+                output?.println("$column:$gameState")
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { onError("Error enviando turno") }
             }
         }
     }
 
-    // CORRECCIÓN 3: Método stop robusto
     fun stop() {
         isListening = false
         try {
-            // Cierra el socket del cliente si existe
             clientSocket?.close()
-            // Cierra el socket del servidor (ahora sí tenemos la referencia)
+            // Cerramos el ServerSocket explícitamente para liberar el puerto
             serverSocket?.close()
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        // Cancela todas las corrutinas en segundo plano
         scope.cancel()
     }
 
-    fun getLocalIpAddress(): String {
+    private fun getLocalIpAddress(): String {
         try {
             val interfaces = Collections.list(NetworkInterface.getNetworkInterfaces())
             for (intf in interfaces) {
@@ -174,9 +186,7 @@ class GameServer(
                     }
                 }
             }
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-        }
+        } catch (ex: Exception) { }
         return ""
     }
 }

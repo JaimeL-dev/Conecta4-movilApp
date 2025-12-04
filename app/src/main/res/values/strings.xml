@@ -1,14 +1,20 @@
 <resources>
     <string name="app_name">Conecta4-proyFin</string>
     <string name="instrucciones_completas">
-            **Objetivo:** Conecta cuatro fichas de tu color en línea recta (horizontal, vertical o diagonal) para ganar.\n\m
+        Objetivo: Conecta cuatro fichas de tu color en línea recta (horizontal, vertical o diagonal) para ganar la partida.\n\n
 
-            **Modo de Juego:** Los jugadores se turnan para dejar caer una ficha en cualquiera de las siete columnas.\n\n
+        Modo de Juego:
+        La partida se juega en un tablero ortogonal en el cual cada jugador colocará sus fichas.
+        En su turno, cada jugador debe seleccionar una de las columnas del tablero para dejar caer una de sus fichas.
+        La aplicación permite interactuar con el juego de dos maneras:
+        1. Táctil: Presionando directamente sobre la columna deseada.
+        2. Sensor: Utilizando el movimiento del dispositivo (inclinación lateral para seleccionar columna y movimiento hacia abajo para soltar la ficha).\n\n
 
-            **Extras (Tiempo):** Se puede activar un límite de tiempo por turno (ej. 10 segundos). Si se agota, se pasa el turno.\n\n
+        Condición de Victoria:
+        Un jugador gana la partida inmediatamente al conseguir alinear cuatro de sus fichas de forma consecutiva en linea recta (horizontal, vertical o diagonal).\n\n
 
-            **Extras (Puntuación):** Se pueden ganar puntos por Conecta 4, Conecta 5, o por conectar dos líneas simultáneas.
-
+        Condición de Empate:
+        Si el tablero se llena por completo y ninguno de los jugadores ha logrado la condición de victoria.
 
     </string>
     <string name="title_activity_main2">Leanback MainActivity2</string>
