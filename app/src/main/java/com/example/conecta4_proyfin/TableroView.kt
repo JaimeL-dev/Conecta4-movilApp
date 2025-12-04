@@ -29,7 +29,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     private var radio = 0f
 
     // Estado del Juego
-    private var turnoJugador = 1
+     var turnoJugador = 1
     private var juegoTerminado = false
     private var esMultijugador = false
     private var jugadorLocalID = 1
@@ -57,15 +57,15 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
 
     // Recursos
     private val prefs: SharedPreferences = context.getSharedPreferences("config", Context.MODE_PRIVATE)
-    private var temaName: String = "Clasico"
+     var temaName: String = "Clasico"
     private var imagenRojaSrc: Bitmap? = null
     private var imagenNegraSrc: Bitmap? = null
-    private var imagenRojaScaled: Bitmap? = null
-    private var imagenNegraScaled: Bitmap? = null
+     var imagenRojaScaled: Bitmap? = null
+     var imagenNegraScaled: Bitmap? = null
 
     // Stats
-    private var movimientos1 = 0
-    private var movimientos2 = 0
+     var movimientos1 = 0
+     var movimientos2 = 0
     private var inicioPartidaMs = 0L
     private var duracionPartidaMs = 0L
 
@@ -244,30 +244,47 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     fun jugarBotInteligente() {
         val botID = 2
         val humanoID = 1
+        if (turnoJugador != botID || juegoTerminado) return
 
-        // 1. Ofensiva
+        var columnaJugad = -1
+
+        // 1. Ofensiva: tratar de ganar
         for (col in 0 until columnas) {
             if (simularJugada(col, botID)) {
-                jugarFichaRemota(col)
-                return
+                columnaJugad = col
+                break
             }
         }
-        // 2. Defensiva
-        for (col in 0 until columnas) {
-            if (simularJugada(col, humanoID)) {
-                jugarFichaRemota(col)
-                return
+
+        // 2. Defensiva: bloquear al jugador
+        if (columnaJugad == -1) {
+            for (col in 0 until columnas) {
+                if (simularJugada(col, humanoID)) {
+                    columnaJugad = col
+                    break
+                }
             }
         }
-        // 3. Estrategia (Centro)
-        val ordenPreferido = listOf(3, 2, 4, 1, 5, 0, 6)
-        for (col in ordenPreferido) {
-            if (tablero[0][col] == 0) {
-                jugarFichaRemota(col)
-                return
+
+        // 3. Estrategia de centro
+        if (columnaJugad == -1) {
+            val ordenPreferido = listOf(3, 2, 4, 1, 5, 0, 6)
+            for (col in ordenPreferido) {
+                if (tablero[0][col] == 0) {
+                    columnaJugad = col
+                    break
+                }
             }
+        }
+
+        // ➤ Jugar la ficha real después de decidir la columna
+        if (columnaJugad != -1) {
+            // Se puede agregar un pequeño delay para ver la animación del bot
+            postDelayed({ soltarFicha(columnaJugad, esRemoto = true) }, 400L)
         }
     }
+
+
 
     private fun simularJugada(col: Int, idJugador: Int): Boolean {
         if (tablero[0][col] != 0) return false
@@ -336,7 +353,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         }
     }
 
-    private fun verificarVictoria(f: Int, c: Int): Boolean {
+     fun verificarVictoria(f: Int, c: Int): Boolean {
         val jugador = tablero[f][c]
         val dirs = listOf(0 to 1, 1 to 0, 1 to 1, 1 to -1)
         for ((df, dc) in dirs) {
@@ -358,7 +375,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
 
     private fun verificarEmpate() = tablero[0].all { it != 0 }
 
-    private fun mostrarGanador(jugador: Int) {
+     fun mostrarGanador(jugador: Int) {
         duracionPartidaMs = System.currentTimeMillis() - inicioPartidaMs
         val totalMovimientos = if (jugador == 1) movimientos1 else movimientos2
         val nombre = if(esMultijugador) {

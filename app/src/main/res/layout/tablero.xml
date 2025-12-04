@@ -1,27 +1,100 @@
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layoutPrincipal"
+    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:padding="8dp"
+    android:background="#0005AA">
+
+    <!-- Movimientos arriba -->
+    <LinearLayout
+        android:id="@+id/layoutMovimientos"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="16dp"
+        android:layout_margin="10dp"
+        >
+        <ImageView
+            android:id="@+id/imgFichaJ1"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginRight="20dp"
+            />
+
+        <TextView
+            android:id="@+id/txtMovJugador1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingVertical="10dp"
+            android:paddingHorizontal="14dp"
+            android:text="0"
+            android:textSize="22sp"
+            android:textColor="@android:color/holo_red_dark"
+
+            android:background="@drawable/fondo_marcador_numeros"/>
+        <TextView
+            android:id="@+id/txtMovJugador2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingVertical="10dp"
+            android:paddingHorizontal="15dp"
+            android:text="0"
+            android:textSize="22sp"
+            android:textColor="@android:color/holo_orange_dark"
+            android:background="@drawable/fondo_marcador_numeros"/>
+
+        <ImageView
+            android:id="@+id/imgFichaJ2"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginLeft="20dp"
+            />
+
+    </LinearLayout>
+
+    <!-- Tiempo -->
+    <LinearLayout
+        android:id="@+id/layoutTiempo"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="16dp"
+        android:layout_margin="10dp"
+        android:background="@drawable/fondo_marcador">
+
+        <TextView
+            android:id="@+id/txtTiempo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Time: 00:00"
+            android:textSize="25sp"
+            android:textColor="@android:color/black"
+            android:gravity="center"/>
+    </LinearLayout>
 
 
-    <!-- Vista del tablero -->
+    <!-- TableroView en el centro -->
     <com.example.conecta4_proyfin.TableroView
         android:id="@+id/tableroView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="50dp"/>
+        android:layout_height="50dp"
+        android:layout_weight="1"
+        android:padding="50dp"/>
 
-    <!-- Botón flotante para cambiar el modo -->
+    <!-- Tiempo abajo -->
+
+
+    <!-- Botón de cambio de modo -->
     <Button
         android:id="@+id/btnModo"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Cambiar modo"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:padding="12dp"
-        android:background="@android:color/holo_blue_dark"
-        android:textColor="@android:color/white"/>
-
-</FrameLayout>
-
+        android:text="MODO: TOUCH"
+        android:paddingVertical="15dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"/>
+</LinearLayout>
