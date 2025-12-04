@@ -112,7 +112,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        canvas.drawColor(Color.parseColor("#0044AA"))
+        canvas.drawColor(Color.parseColor("#0444AB"))
 
         // FICHA FANTASMA
         if (!juegoTerminado && isEnabled) {
