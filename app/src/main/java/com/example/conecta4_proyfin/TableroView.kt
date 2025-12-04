@@ -13,30 +13,25 @@ import androidx.core.animation.addListener
 
 class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
-    // Callback
     var onFichaColocada: ((Int) -> Unit)? = null
+    var onJuegoTerminado: ((Int, Int) -> Unit)? = null
 
-    // Modos
     var modoControl = 0
 
-    // Tablero
     private val filas = 6
     private val columnas = 7
+    // Tablero: 0=Vacío, 1=Jugador1(Humano), 2=Jugador2(Bot/Rival)
     private val tablero = Array(filas) { IntArray(columnas) { 0 } }
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var celdaSize = 0f
     private var radio = 0f
 
-    // Estado del Juego
     private var turnoJugador = 1
     private var juegoTerminado = false
-
-    // MULTIJUGADOR (NUEVO)
     private var esMultijugador = false
-    private var jugadorLocalID = 1 // 1 por defecto (Solo o Server)
+    private var jugadorLocalID = 1
 
-    // Animación
     private var animFilaFinal = -1
     private var animColumnaFinal = -1
     private var animYActual = -1f
@@ -44,7 +39,6 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     private val DURACION_ANIM = 350L
     private var sonidoFicha: MediaPlayer? = null
 
-    // Sensores
     private var columnaSeleccionada = 3
     private var filtroAX = 0f
     private val alpha = 0.15f
@@ -57,7 +51,6 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     private val UMBRAL_NEUTRO = 1.2f
     private var gestoBloqueado = false
 
-    // Recursos
     private val prefs: SharedPreferences = context.getSharedPreferences("config", Context.MODE_PRIVATE)
     private var temaName: String = "Clasico"
     private var imagenRojaSrc: Bitmap? = null
@@ -65,7 +58,6 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     private var imagenRojaScaled: Bitmap? = null
     private var imagenNegraScaled: Bitmap? = null
 
-    // Stats
     private var movimientos1 = 0
     private var movimientos2 = 0
     private var inicioPartidaMs = 0L
@@ -79,13 +71,10 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         iniciarJuego()
     }
 
-    // ------------------------------------------------------------
-    // CONFIGURACIÓN (NUEVO MÉTODO IMPORTANTE)
-    // ------------------------------------------------------------
     fun configurarJugador(jugadorID: Int, esMultijugador: Boolean) {
         this.jugadorLocalID = jugadorID
         this.esMultijugador = esMultijugador
-        reiniciarJuego() // Reiniciamos para aplicar estado limpio
+        reiniciarJuego()
     }
 
     private fun cargarImagenes() {
@@ -118,15 +107,9 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         super.onDraw(canvas)
         canvas.drawColor(Color.parseColor("#0044AA"))
 
-        // FICHA FANTASMA (HOVER)
-        // Solo dibujamos si el juego está activo y la vista habilitada (es mi turno)
         if (!juegoTerminado && isEnabled) {
             val cx = columnaSeleccionada * celdaSize + celdaSize / 2
             val cy = celdaSize / 2
-
-            // DETERMINAR COLOR DE LA FICHA FANTASMA
-            // En multijugador, siempre muestro MI color (jugadorLocalID).
-            // En local, muestro el color del turno actual.
             val fichaA_Dibujar = if (esMultijugador) jugadorLocalID else turnoJugador
 
             if (temaName == "Clasico") {
@@ -140,22 +123,17 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
                     dibujarFichaCanvas(canvas, cx, cy, fichaA_Dibujar, ghost = false)
                 } else {
                     val img = if (fichaA_Dibujar == 1) imagenRojaScaled else imagenNegraScaled
-                    if (img != null) {
-                        canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
-                    } else {
-                        dibujarFichaCanvas(canvas, cx, cy, fichaA_Dibujar, ghost = true)
-                    }
+                    if (img != null) canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
+                    else dibujarFichaCanvas(canvas, cx, cy, fichaA_Dibujar, ghost = true)
                 }
             }
         }
 
-        // DIBUJAR TABLERO (Fichas ya colocadas)
         for (f in 0 until filas) {
             for (c in 0 until columnas) {
                 val cx = c * celdaSize + celdaSize / 2
                 val cy = f * celdaSize + celdaSize / 2 + celdaSize
                 val jugador = tablero[f][c]
-
                 if (temaName == "Clasico") {
                     dibujarFichaCanvas(canvas, cx, cy, jugador, ghost = false)
                 } else {
@@ -166,49 +144,33 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
                         paint.color = Color.BLACK
                         dibujarFichaCanvas(canvas, cx, cy, jugador, ghost = false)
                     } else {
-                        val img = when (jugador) {
-                            1 -> imagenRojaScaled
-                            2 -> imagenNegraScaled
-                            else -> null
-                        }
-                        if (img != null)
-                            canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
-                        else
-                            dibujarFichaCanvas(canvas, cx, cy, jugador, false)
+                        val img = when (jugador) { 1 -> imagenRojaScaled; 2 -> imagenNegraScaled; else -> null }
+                        if (img != null) canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
+                        else dibujarFichaCanvas(canvas, cx, cy, jugador, false)
                     }
                 }
             }
         }
 
-        // FICHA ANIMADA (CAYENDO)
         if (animandoFicha) {
             val cx = animColumnaFinal * celdaSize + celdaSize / 2
             val cy = animYActual
-            // La ficha animada es siempre la del turno actual
             val img = if (turnoJugador == 1) imagenRojaScaled else imagenNegraScaled
-
-            if (temaName == "Clasico" || img == null) {
-                dibujarFichaCanvas(canvas, cx, cy, turnoJugador, false)
-            } else {
+            if (temaName == "Clasico" || img == null) dibujarFichaCanvas(canvas, cx, cy, turnoJugador, false)
+            else {
                 if(temaName == "Minimalista"){
                     paint.shader = null
                     paint.style = Paint.Style.STROKE
                     paint.strokeWidth = 6f
                     paint.color = Color.BLACK
                     dibujarFichaCanvas(canvas, cx, cy, turnoJugador, ghost = false)
-                } else {
-                    canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
-                }
+                } else canvas.drawBitmap(img, cx - img.width / 2, cy - img.height / 2, null)
             }
         }
     }
 
     private fun dibujarFichaCanvas(canvas: Canvas, cx: Float, cy: Float, jugador: Int, ghost: Boolean) {
-        val colorBase = when (jugador) {
-            1 -> Color.RED
-            2 -> Color.YELLOW
-            else -> Color.LTGRAY
-        }
+        val colorBase = when (jugador) { 1 -> Color.RED; 2 -> Color.YELLOW; else -> Color.LTGRAY }
         paint.setShadowLayer(8f, 0f, 4f, Color.argb(120, 0, 0, 0))
         paint.shader = RadialGradient(cx, cy, radio, Color.WHITE, colorBase, Shader.TileMode.CLAMP)
         canvas.drawCircle(cx, cy, radio, paint)
@@ -218,11 +180,8 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         if (!isEnabled) return false
-
         if (event?.action == MotionEvent.ACTION_DOWN && !juegoTerminado) {
-            // Seguridad: En multijugador, si no es mi turno, no hago nada (aunque isEnabled debería bloquearlo)
             if (esMultijugador && turnoJugador != jugadorLocalID) return false
-
             when (modoControl) {
                 0 -> soltarFicha((event.x / celdaSize).toInt(), esRemoto = false)
                 1 -> soltarFicha(columnaSeleccionada, esRemoto = false)
@@ -233,13 +192,10 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
 
     fun procesarSensor(ax: Float, ay: Float) {
         if (!isEnabled || juegoTerminado || animandoFicha) return
-        // Seguridad Extra
         if (esMultijugador && turnoJugador != jugadorLocalID) return
-
         val axCorr = -ax
         filtroAX += alpha * (axCorr - filtroAX)
         val ahora = System.currentTimeMillis()
-
         when (modoControl) {
             1 -> {
                 if (ahora - tiempoUltMovimiento > COOLDOWN_MOV) {
@@ -258,7 +214,6 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
                     }
                 }
                 if (filtroAX in -UMBRAL_NEUTRO..UMBRAL_NEUTRO) gestoBloqueado = false
-
                 if (ay < -6f && ahora - tiempoUltCaida > COOLDOWN_CAIDA) {
                     soltarFicha(columnaSeleccionada, esRemoto = false)
                     tiempoUltCaida = ahora
@@ -267,21 +222,76 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         }
     }
 
-    private fun moverIzquierda() {
-        columnaSeleccionada = (columnaSeleccionada - 1).coerceAtLeast(0)
-        invalidate()
-    }
+    private fun moverIzquierda() { columnaSeleccionada = (columnaSeleccionada - 1).coerceAtLeast(0); invalidate() }
+    private fun moverDerecha() { columnaSeleccionada = (columnaSeleccionada + 1).coerceAtMost(columnas - 1); invalidate() }
 
-    private fun moverDerecha() {
-        columnaSeleccionada = (columnaSeleccionada + 1).coerceAtMost(columnas - 1)
-        invalidate()
-    }
+    fun jugarFichaRemota(columna: Int) { post { soltarFicha(columna, esRemoto = true) } }
 
-    fun jugarFichaRemota(columna: Int) {
-        post {
-            soltarFicha(columna, esRemoto = true)
+    // ================================================================
+    //  IA DEL BOT (Bot "Un poco más inteligente")
+    // ================================================================
+    fun jugarBotInteligente() {
+        val botID = 2
+        val humanoID = 1
+
+        // 1. ¿PUEDO GANAR YA? (Ofensiva)
+        // Buscamos si hay alguna columna donde poner mi ficha me de la victoria
+        for (col in 0 until columnas) {
+            if (simularJugada(col, botID)) {
+                jugarFichaRemota(col)
+                return
+            }
+        }
+
+        // 2. ¿ME VAN A GANAR? (Defensiva)
+        // Buscamos si el humano ganaría poniendo ficha en alguna columna y lo bloqueamos
+        for (col in 0 until columnas) {
+            if (simularJugada(col, humanoID)) {
+                jugarFichaRemota(col)
+                return
+            }
+        }
+
+        // 3. ESTRATEGIA (Centro)
+        // Si no hay peligro inminente, preferimos el centro.
+        // Orden de preferencia: 3, 2, 4, 1, 5, 0, 6 (Centro hacia afuera)
+        val ordenPreferido = listOf(3, 2, 4, 1, 5, 0, 6)
+        for (col in ordenPreferido) {
+            // Verificamos si la columna no está llena
+            if (tablero[0][col] == 0) {
+                jugarFichaRemota(col)
+                return
+            }
         }
     }
+
+    // Devuelve true si el jugador ganaría jugando en esa columna
+    private fun simularJugada(col: Int, idJugador: Int): Boolean {
+        // Verificar si la columna está llena
+        if (tablero[0][col] != 0) return false
+
+        // Buscar la fila donde caería la ficha
+        var filaCaida = -1
+        for (f in filas - 1 downTo 0) {
+            if (tablero[f][col] == 0) {
+                filaCaida = f
+                break
+            }
+        }
+
+        if (filaCaida == -1) return false
+
+        // Simular movimiento
+        tablero[filaCaida][col] = idJugador
+        // Verificar si gana
+        val gana = verificarVictoria(filaCaida, col)
+        // Deshacer movimiento (limpiar)
+        tablero[filaCaida][col] = 0
+
+        return gana
+    }
+
+    // ================================================================
 
     private fun animarFicha(f: Int, c: Int, onEnd: () -> Unit) {
         animandoFicha = true
@@ -292,29 +302,20 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         animYActual = yIni
         val anim = ValueAnimator.ofFloat(yIni, yFin)
         anim.duration = DURACION_ANIM
-        anim.addUpdateListener {
-            animYActual = it.animatedValue as Float
-            invalidate()
-        }
+        anim.addUpdateListener { animYActual = it.animatedValue as Float; invalidate() }
         anim.addListener(onEnd = { onEnd() })
         anim.start()
     }
 
     fun soltarFicha(columna: Int, esRemoto: Boolean) {
         if (animandoFicha || columna !in 0 until columnas) return
-
         for (f in filas - 1 downTo 0) {
             if (tablero[f][columna] == 0) {
-
-                if (!esRemoto) {
-                    onFichaColocada?.invoke(columna)
-                }
-
+                if (!esRemoto) onFichaColocada?.invoke(columna)
                 animarFicha(f, columna) {
                     tablero[f][columna] = turnoJugador
                     sonidoFicha?.start()
                     animandoFicha = false
-
                     when {
                         verificarVictoria(f, columna) -> {
                             juegoTerminado = true
@@ -325,14 +326,8 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
                             mostrarEmpate()
                         }
                         else -> {
-                            // Cambio de turno 1 <-> 2
-                            if (turnoJugador == 1) {
-                                movimientos1++
-                                turnoJugador = 2
-                            } else {
-                                movimientos2++
-                                turnoJugador = 1
-                            }
+                            if (turnoJugador == 1) { movimientos1++; turnoJugador = 2 }
+                            else { movimientos2++; turnoJugador = 1 }
                         }
                     }
                     invalidate()
@@ -358,11 +353,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         var ff = f + df
         var cc = c + dc
         var total = 0
-        while (ff in 0 until filas && cc in 0 until columnas && tablero[ff][cc] == jugador) {
-            total++
-            ff += df
-            cc += dc
-        }
+        while (ff in 0 until filas && cc in 0 until columnas && tablero[ff][cc] == jugador) { total++; ff += df; cc += dc }
         return total
     }
 
@@ -370,40 +361,25 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
 
     private fun mostrarGanador(jugador: Int) {
         duracionPartidaMs = System.currentTimeMillis() - inicioPartidaMs
-        // Personalizamos el mensaje
-        val msg = if (esMultijugador) {
-            if (jugador == jugadorLocalID) "¡Has Ganado!" else "Has Perdido"
+        val totalMovimientos = if (jugador == 1) movimientos1 else movimientos2
+        // Nombre para el record
+        val nombre = if(esMultijugador) {
+            if (jugador == jugadorLocalID) "Yo" else "Rival"
         } else {
-            "El Jugador $jugador ganó"
+            if (jugador == 1) "Jugador Humano" else "CPU"
         }
 
-        RecordSubmitter.submitRecord(
-            context = context,
-            nombre = if(esMultijugador && jugador == jugadorLocalID) "Yo" else "Rival",
-            puntaje = (if (jugador == 1) movimientos1 else movimientos2) + 1,
-            tiempoJuego = duracionPartidaMs
-        )
-
-        AlertDialog.Builder(context)
-            .setTitle("Partida Finalizada")
-            .setMessage(msg)
-            .setCancelable(false)
-            .setPositiveButton("Reiniciar") { _, _ -> reiniciarJuego() }
-            .show()
+        RecordSubmitter.submitRecord(context, nombre, totalMovimientos + 1, duracionPartidaMs)
+        onJuegoTerminado?.invoke(jugador, totalMovimientos + 1)
     }
 
     private fun mostrarEmpate() {
-        AlertDialog.Builder(context)
-            .setTitle("¡Empate!")
-            .setMessage("Tablero lleno.")
-            .setCancelable(false)
-            .setPositiveButton("Reiniciar") { _, _ -> reiniciarJuego() }
-            .show()
+        onJuegoTerminado?.invoke(0, movimientos1 + movimientos2)
     }
 
-    private fun reiniciarJuego() {
+    fun reiniciarJuego() {
         for (f in 0 until filas) for (c in 0 until columnas) tablero[f][c] = 0
-        turnoJugador = 1 // Siempre empieza el 1 (Rojo/Server)
+        turnoJugador = 1
         juegoTerminado = false
         animandoFicha = false
         columnaSeleccionada = 3
