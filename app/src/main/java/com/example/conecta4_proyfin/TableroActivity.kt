@@ -51,7 +51,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
     private var esMiTurno = true
     private var startMediaPlayer: MediaPlayer? = null
 
-    // --- Variables para controlar el tiempo del Bot ---
     private val handlerBot = Handler(Looper.getMainLooper())
     private var runnableBot: Runnable? = null
 
@@ -67,7 +66,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
 
         reproducirSonidoInicio()
 
-        // Recuperar modo de juego y IP del servidor si aplica
         modoJuego = intent.getStringExtra(EXTRA_MODO) ?: MODO_SOLO
         serverIpDirecta = intent.getStringExtra(EXTRA_SERVER_IP)
 
@@ -78,7 +76,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         txtMovJugador2 = findViewById(R.id.txtMovJugador2)
         layoutMovimientos = findViewById(R.id.layoutMovimientos)
 
-        // Mini-fichas
         imgFichaJugador1 = ImageView(this)
         imgFichaJugador2 = ImageView(this)
         layoutMovimientos.addView(imgFichaJugador1, 1)
@@ -98,11 +95,9 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
             btnModo.text = textoModo[tableroView.modoControl]
         }
 
-        // Callback cuando se coloca una ficha
         tableroView.onFichaColocada = { columna ->
             actualizarMiniFicha(tableroView.turnoJugador)
             if (modoJuego == MODO_SOLO) {
-                // --- Lógica del Bot controlada ---
                 tableroView.isEnabled = false
                 runnableBot = Runnable {
                     if (!isFinishing) {
@@ -117,16 +112,13 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
-        // Callback cuando el juego termina
         tableroView.onJuegoTerminado = { ganador, movimientos ->
             if (modoJuego == MODO_SOLO) {
-                // Cancelar el Bot inmediatamente
                 runnableBot?.let { handlerBot.removeCallbacks(it) }
             }
             irAPantallaResultados(ganador, movimientos)
         }
 
-        // Iniciar modo de juego según selección
         when (modoJuego) {
             MODO_SERVER -> iniciarModoServidor()
             MODO_CLIENTE -> iniciarModoCliente()
@@ -134,9 +126,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    // ================================================================
-    // Sonido de inicio
-    // ================================================================
     private fun reproducirSonidoInicio() {
         try {
             startMediaPlayer?.release()
@@ -147,9 +136,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    // ================================================================
-    // Modo Solo
-    // ================================================================
     private fun iniciarModoSolo() {
         esMiTurno = true
         tableroView.configurarJugador(1, esMultijugador = false)
@@ -157,9 +143,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         tableroView.iniciarJuego()
     }
 
-    // ================================================================
-    // Modo Servidor
-    // ================================================================
     private fun iniciarModoServidor() {
         tableroView.configurarJugador(1, esMultijugador = true)
         bloquearTablero("Esperando conexión del rival...")
@@ -183,9 +166,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         tableroView.iniciarJuego()
     }
 
-    // ================================================================
-    // Modo Cliente
-    // ================================================================
     private fun iniciarModoCliente() {
         tableroView.configurarJugador(2, esMultijugador = true)
         bloquearTablero("Conectando al servidor...")
@@ -209,9 +189,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         tableroView.iniciarJuego()
     }
 
-    // ================================================================
-    // Jugada Local
-    // ================================================================
     private fun onJugadaLocalRealizada(columna: Int) {
         if (!esMiTurno) return
 
@@ -226,11 +203,7 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         bloquearTablero("Turno del rival")
     }
 
-    // ================================================================
-    // Jugada Rival
-    // ================================================================
     private fun recibirJugadaRival(columna: Int, estado: String) {
-        // Reinicio de partida
         if (columna == -1 && estado == "RESET") {
             finishActivity(REQUEST_CODE_RESULTADOS)
             tableroView.reiniciarJuego()
@@ -257,7 +230,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
                 Toast.makeText(this, "¡Tu turno!", Toast.LENGTH_SHORT).show()
             }
             "GANASTE" -> {
-                // Aquí podrías llamar a irAPantallaResultados si deseas manejar desde el servidor
             }
             "PERDISTE" -> {
                 bloquearTablero("Fin del juego")
@@ -265,9 +237,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    // ================================================================
-    // Pantalla de Resultados
-    // ================================================================
     private fun irAPantallaResultados(ganador: Int, movimientos: Int) {
         val intent = Intent(this, activity_resultados2::class.java)
         intent.putExtra(activity_resultados2.EXTRA_GANADOR, ganador)
@@ -282,9 +251,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         startActivityForResult(intent, REQUEST_CODE_RESULTADOS)
     }
 
-    // ================================================================
-    // Manejo de resultados del Activity
-    // ================================================================
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_CODE_RESULTADOS) {
@@ -341,10 +307,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         else imgFichaJugador2.setImageBitmap(bitmap)
     }
 
-
-    // ================================================================
-    // Bloquear / Desbloquear tablero
-    // ================================================================
     private fun bloquearTablero(mensaje: String) {
         tableroView.isEnabled = false
         btnModo.isEnabled = false
@@ -357,9 +319,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         title = "Conecta 4 - Tu Turno"
     }
 
-    // ================================================================
-    // Ciclo de vida
-    // ================================================================
     override fun onDestroy() {
         super.onDestroy()
         gameServer?.stop()
@@ -380,9 +339,6 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         sensorManager.unregisterListener(this)
     }
 
-    // ================================================================
-    // Sensores
-    // ================================================================
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || (modoJuego != MODO_SOLO && !esMiTurno) || tableroView.modoControl == 0) return
         tableroView.procesarSensor(event.values[0], event.values[2])

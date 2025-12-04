@@ -23,7 +23,7 @@ class unirsePartida : AppCompatActivity() {
         gameClient = GameClient(
             onMessageReceived = { _, _ -> },
             onConnected = { serverIp ->
-                // ¡Conectado! Pasamos la IP encontrada a la siguiente pantalla
+                // ¡Conectado! Pasamos la IP a
                 handleServerFoundAndConnected(serverIp)
             },
             onError = { errorMessage ->
@@ -46,11 +46,10 @@ class unirsePartida : AppCompatActivity() {
 
             val intent = Intent(this, TableroActivity::class.java).apply {
                 putExtra("extra_modo", "cliente")
-                putExtra("extra_server_ip", serverIp) // <--- CLAVE: Enviamos la IP
+                putExtra("extra_server_ip", serverIp)
             }
             startActivity(intent)
 
-            // Cerramos esta actividad para liberar recursos y evitar volver atrás
             finish()
         }
     }
@@ -58,8 +57,6 @@ class unirsePartida : AppCompatActivity() {
     private fun handleClientError(errorMessage: String) {
         runOnUiThread {
             if (!isFinishing) {
-                // tvEstadoCliente.text = "Error: $errorMessage"
-                // Opcional: mostrar error solo si es crítico
             }
         }
     }

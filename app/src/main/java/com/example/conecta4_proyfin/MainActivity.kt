@@ -29,7 +29,7 @@ class MainActivity : AppCompatActivity() {
         // 1. INICIALIZAR AUDIO EN LOOP
         // ===============================================================
         try {
-            // Asegúrate de que el archivo se llame 'menu_loop.mp3' en res/raw
+
             musicaFondo = MediaPlayer.create(this, R.raw.menu_loop)
             musicaFondo?.isLooping = true // Activamos la repetición
             musicaFondo?.start()
@@ -40,24 +40,21 @@ class MainActivity : AppCompatActivity() {
 
         contenedorAnimacion = findViewById(R.id.contenedorAnimacion)
 
-        // Espera a que el contenedor mida su tamaño antes de crear las fichas
+
         contenedorAnimacion.post {
             iniciarAnimacionFichas()
         }
 
         // Botones
         findViewById<Button>(R.id.btn_un_jugador).setOnClickListener {
-            // He actualizado esto para que coincida con tu TableroActivity
+
             val intent = Intent(this, TableroActivity::class.java)
-            // Usamos las constantes que definimos antes:
+
             intent.putExtra(TableroActivity.EXTRA_MODO, TableroActivity.MODO_SOLO)
             startActivity(intent)
         }
 
         findViewById<Button>(R.id.btn_dos_jugadores).setOnClickListener {
-            // Este va a tu menú multijugador (crearPartida / unirsePartida)
-            // Asumo que tu clase 'menuMulti' es donde eliges Server o Cliente
-            // O si vas directo a crearPartida (como vimos antes), cámbialo aquí.
             val intent = Intent(this, crearPartida::class.java)
             startActivity(intent)
         }
@@ -85,7 +82,7 @@ class MainActivity : AppCompatActivity() {
             val ficha = View(this)
             val color = if (i % 2 == 0) Color.RED else Color.YELLOW
 
-            // Crea un círculo con borde suave
+
             val drawable = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(color)
@@ -113,12 +110,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ===============================================================
-    // GESTIÓN DEL CICLO DE VIDA DEL AUDIO
+    // GESTIÓN DEL AUDIO
     // ===============================================================
 
     override fun onResume() {
         super.onResume()
-        // Si volvemos a esta pantalla, reanudamos
         musicaFondo?.let {
             if (!it.isPlaying) {
                 it.seekTo(currentPosition)
@@ -129,7 +125,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        // Si la app se va a segundo plano o cambias de pantalla, pausamos
         musicaFondo?.let {
             if (it.isPlaying) {
                 it.pause()
@@ -140,7 +135,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Liberar recursos de memoria al cerrar la app totalmente
         musicaFondo?.stop()
         musicaFondo?.release()
         musicaFondo = null

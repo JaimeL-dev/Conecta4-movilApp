@@ -19,7 +19,7 @@ class activity_resultados2 : AppCompatActivity() {
         const val EXTRA_SOY_JUGADOR_ID = "extra_soy_jugador_id"
     }
 
-    // Variable para el sonido
+
     private var mediaPlayer: MediaPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,7 +37,7 @@ class activity_resultados2 : AppCompatActivity() {
         val esMultijugador = intent.getBooleanExtra(EXTRA_ES_MULTIJUGADOR, false)
         val soyJugadorID = intent.getIntExtra(EXTRA_SOY_JUGADOR_ID, 1)
 
-        // Ocultar botón en multijugador
+
         if (esMultijugador) {
             btnJugarNuevo.visibility = View.GONE
         } else {
@@ -47,12 +47,12 @@ class activity_resultados2 : AppCompatActivity() {
         tvDetalles.text = "Movimientos totales: $movimientos"
 
         if (ganador == 0) {
-            // EMPATE
+
             tvResultado.text = "¡EMPATE!"
             tvResultado.setTextColor(Color.GRAY)
-            // Opcional: Sonido de empate si tuvieras
+
         } else {
-            // Determinar si gané yo
+
             val ganeYo = if (esMultijugador) (ganador == soyJugadorID) else true
 
             if (esMultijugador) {
@@ -66,9 +66,7 @@ class activity_resultados2 : AppCompatActivity() {
                     reproducirSonido(R.raw.game_over) // SONIDO DERROTA
                 }
             } else {
-                // Modo un solo jugador (vs CPU o Local)
-                // Aquí asumimos que si llegas a esta pantalla en modo Local, es "Victoria" del que jugó
-                // O si es vs CPU (donde CPU es jugador 2):
+
                 if (ganador == 1) {
                     reproducirSonido(R.raw.victory) // Ganó Humano
                 } else {
@@ -94,7 +92,6 @@ class activity_resultados2 : AppCompatActivity() {
 
     private fun reproducirSonido(resId: Int) {
         try {
-            // Liberar si ya existía
             mediaPlayer?.release()
             mediaPlayer = MediaPlayer.create(this, resId)
             mediaPlayer?.start()
@@ -105,7 +102,6 @@ class activity_resultados2 : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Liberar recursos de audio
         mediaPlayer?.release()
         mediaPlayer = null
     }

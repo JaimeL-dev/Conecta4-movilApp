@@ -239,7 +239,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     fun jugarFichaRemota(columna: Int) { post { soltarFicha(columna, esRemoto = true) } }
 
     // ================================================================
-    //  BOT INTELIGENTE
+    //  BOT
     // ================================================================
     fun jugarBotInteligente() {
         val botID = 2
@@ -277,9 +277,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
             }
         }
 
-        // ➤ Jugar la ficha real después de decidir la columna
         if (columnaJugad != -1) {
-            // Se puede agregar un pequeño delay para ver la animación del bot
             postDelayed({ soltarFicha(columnaJugad, esRemoto = true) }, 400L)
         }
     }
@@ -319,9 +317,6 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         anim.start()
     }
 
-    // --------------------------------------------------------------------------------
-    // CORRECCIÓN CRÍTICA AQUÍ: Añadido chequeo de 'juegoTerminado' al principio
-    // --------------------------------------------------------------------------------
     fun soltarFicha(columna: Int, esRemoto: Boolean) {
         if (juegoTerminado || animandoFicha || columna !in 0 until columnas) return
 
