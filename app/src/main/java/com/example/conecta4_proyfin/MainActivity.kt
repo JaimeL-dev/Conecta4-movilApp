@@ -1,10 +1,10 @@
 package com.example.conecta4_proyfin
 
-
 import android.animation.ObjectAnimator
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaPlayer // Import necesario
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -16,9 +16,27 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var contenedorAnimacion: FrameLayout
 
+    // --- VARIABLES DE AUDIO ---
+    private var musicaFondo: MediaPlayer? = null
+    private var currentPosition = 0
+    // --------------------------
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // ===============================================================
+        // 1. INICIALIZAR AUDIO EN LOOP
+        // ===============================================================
+        try {
+            // Asegúrate de que el archivo se llame 'menu_loop.mp3' en res/raw
+            musicaFondo = MediaPlayer.create(this, R.raw.menu_loop)
+            musicaFondo?.isLooping = true // Activamos la repetición
+            musicaFondo?.start()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        // ===============================================================
 
         contenedorAnimacion = findViewById(R.id.contenedorAnimacion)
 
@@ -29,14 +47,18 @@ class MainActivity : AppCompatActivity() {
 
         // Botones
         findViewById<Button>(R.id.btn_un_jugador).setOnClickListener {
+            // He actualizado esto para que coincida con tu TableroActivity
             val intent = Intent(this, TableroActivity::class.java)
-            intent.putExtra("modo", "un_jugador")
+            // Usamos las constantes que definimos antes:
+            intent.putExtra(TableroActivity.EXTRA_MODO, TableroActivity.MODO_SOLO)
             startActivity(intent)
         }
 
         findViewById<Button>(R.id.btn_dos_jugadores).setOnClickListener {
-            val intent = Intent(this, menuMulti::class.java)
-            intent.putExtra("modo", "multijugador_online")
+            // Este va a tu menú multijugador (crearPartida / unirsePartida)
+            // Asumo que tu clase 'menuMulti' es donde eliges Server o Cliente
+            // O si vas directo a crearPartida (como vimos antes), cámbialo aquí.
+            val intent = Intent(this, crearPartida::class.java)
             startActivity(intent)
         }
 
@@ -44,18 +66,12 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, TemaActivity::class.java))
         }
         findViewById<Button>(R.id.btn_instrucciones).setOnClickListener {
-            // 1. Crea un Intent especificando el origen (this) y el destino (Activity::class.java)
             val intentInstrucciones = Intent(this, activity_instrucciones2::class.java)
-
-            // 2. Ejecuta el Intent para iniciar la nueva pantalla
             startActivity(intentInstrucciones)
         }
 
         findViewById<Button>(R.id.btn_records).setOnClickListener {
-            // 1. Crea un Intent especificando el origen (this) y el destino (Activity::class.java)
             val intentRecords = Intent(this, activity_records2::class.java)
-
-            // 2. Ejecuta el Intent para iniciar la nueva pantalla
             startActivity(intentRecords)
         }
 
@@ -94,5 +110,39 @@ class MainActivity : AppCompatActivity() {
             animator.startDelay = (i * 300).toLong()
             animator.start()
         }
+    }
+
+    // ===============================================================
+    // GESTIÓN DEL CICLO DE VIDA DEL AUDIO
+    // ===============================================================
+
+    override fun onResume() {
+        super.onResume()
+        // Si volvemos a esta pantalla, reanudamos
+        musicaFondo?.let {
+            if (!it.isPlaying) {
+                it.seekTo(currentPosition)
+                it.start()
+            }
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Si la app se va a segundo plano o cambias de pantalla, pausamos
+        musicaFondo?.let {
+            if (it.isPlaying) {
+                it.pause()
+                currentPosition = it.currentPosition
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Liberar recursos de memoria al cerrar la app totalmente
+        musicaFondo?.stop()
+        musicaFondo?.release()
+        musicaFondo = null
     }
 }

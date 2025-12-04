@@ -6,6 +6,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -35,12 +36,20 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
     private var gameClient: GameClient? = null
 
     private var esMiTurno = true
+    private var startMediaPlayer: MediaPlayer? = null
+
+    // --- CORRECCIÓN 1: Variables para controlar el tiempo del Bot ---
+    private val handlerBot = Handler(Looper.getMainLooper())
+    private var runnableBot: Runnable? = null
+    // ----------------------------------------------------------------
 
     private val textoModo = arrayOf("MODO: TOUCH", "MODO: SENSOR CONTINUO", "MODO: GESTO IZQ-DER")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.tablero)
+
+        reproducirSonidoInicio()
 
         modoJuego = intent.getStringExtra(EXTRA_MODO) ?: MODO_SOLO
         serverIpDirecta = intent.getStringExtra(EXTRA_SERVER_IP)
@@ -62,35 +71,34 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
             btnModo.text = textoModo[tableroView.modoControl]
         }
 
-        // ==============================================================
-        //  CONFIGURACIÓN DE TURNOS Y BOT
-        // ==============================================================
         tableroView.onFichaColocada = { columna ->
-
             if (modoJuego == MODO_SOLO) {
-                // EL USUARIO JUGÓ -> TURNO DEL BOT
-
-                // 1. Bloquear interacción para que no juegue mientras el bot piensa
+                // --- CORRECCIÓN 2: Lógica del Bot controlada ---
                 tableroView.isEnabled = false
 
-                // 2. Esperar 1 segundo para dar realismo
-                Handler(Looper.getMainLooper()).postDelayed({
-                    // 3. El bot inteligente calcula y juega
-                    tableroView.jugarBotInteligente()
-
-                    // 4. Devolvemos el control al humano (si no terminó el juego)
-                    // Nota: TableroView maneja internamente 'juegoTerminado',
-                    // pero aquí reactivamos los inputs.
-                    tableroView.isEnabled = true
-                }, 1000)
-
+                // Definimos lo que hará el bot
+                runnableBot = Runnable {
+                    // Verificamos que la actividad siga viva y el juego no haya terminado
+                    if (!isFinishing) {
+                        tableroView.jugarBotInteligente()
+                        tableroView.isEnabled = true
+                    }
+                }
+                // Ejecutamos en 1 segundo
+                handlerBot.postDelayed(runnableBot!!, 1000)
+                // -----------------------------------------------
             } else {
-                // LÓGICA MULTIJUGADOR
                 onJugadaLocalRealizada(columna)
             }
         }
 
         tableroView.onJuegoTerminado = { ganador, movimientos ->
+            // --- CORRECCIÓN 3: Si el juego terminó, cancelamos al bot inmediatamente ---
+            if (modoJuego == MODO_SOLO) {
+                runnableBot?.let { handlerBot.removeCallbacks(it) }
+            }
+            // ---------------------------------------------------------------------------
+
             irAPantallaResultados(ganador, movimientos)
         }
 
@@ -101,13 +109,23 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    private fun reproducirSonidoInicio() {
+        try {
+            startMediaPlayer?.release()
+            startMediaPlayer = MediaPlayer.create(this, R.raw.game_start)
+            startMediaPlayer?.start()
+        } catch (e: Exception) { e.printStackTrace() }
+    }
+
     private fun iniciarModoSolo() {
         esMiTurno = true
-        // En modo solo, el humano es Jugador 1
         tableroView.configurarJugador(1, esMultijugador = false)
         tableroView.isEnabled = true
         tableroView.iniciarJuego()
     }
+
+    // ... (El resto de tus métodos iniciarModoServidor, iniciarModoCliente, onJugadaLocalRealizada, recibirJugadaRival SIGUEN IGUAL) ...
+    // Solo los pongo aquí resumidos para contexto, no necesitas cambiarlos si ya los tienes.
 
     private fun iniciarModoServidor() {
         tableroView.configurarJugador(1, esMultijugador = true)
@@ -148,6 +166,7 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         if (columna == -1 && estado == "RESET") {
             finishActivity(REQUEST_CODE_RESULTADOS)
             tableroView.reiniciarJuego()
+            reproducirSonidoInicio()
             if (modoJuego == MODO_SERVER) {
                 esMiTurno = true
                 desbloquearTablero()
@@ -159,14 +178,12 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
             }
             return
         }
-
         tableroView.jugarFichaRemota(columna)
         if (estado == "TU_TURNO") {
             esMiTurno = true
             desbloquearTablero()
             Toast.makeText(this, "¡Tu turno!", Toast.LENGTH_SHORT).show()
         } else if (estado == "GANASTE") {
-            // Animación continua
         } else if (estado == "PERDISTE") {
             bloquearTablero("Fin del juego")
         }
@@ -188,6 +205,7 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         if (requestCode == REQUEST_CODE_RESULTADOS) {
             if (resultCode == RESULT_OK) {
                 tableroView.reiniciarJuego()
+                reproducirSonidoInicio()
                 if (modoJuego == MODO_SERVER) {
                     esMiTurno = true
                     desbloquearTablero()
@@ -212,6 +230,11 @@ class TableroActivity : AppCompatActivity(), SensorEventListener {
         super.onDestroy()
         gameServer?.stop()
         gameClient?.stop()
+        startMediaPlayer?.release()
+        startMediaPlayer = null
+
+        // --- CORRECCIÓN FINAL: Limpiar callbacks al destruir ---
+        runnableBot?.let { handlerBot.removeCallbacks(it) }
     }
 
     override fun onResume() { super.onResume(); sensorManager.registerListener(this, sensorMovimiento, SensorManager.SENSOR_DELAY_GAME) }

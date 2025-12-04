@@ -1,6 +1,5 @@
 package com.example.conecta4_proyfin
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.*
@@ -13,25 +12,29 @@ import androidx.core.animation.addListener
 
 class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
 
+    // Callbacks
     var onFichaColocada: ((Int) -> Unit)? = null
     var onJuegoTerminado: ((Int, Int) -> Unit)? = null
 
+    // Modos
     var modoControl = 0
 
+    // Tablero
     private val filas = 6
     private val columnas = 7
-    // Tablero: 0=Vacío, 1=Jugador1(Humano), 2=Jugador2(Bot/Rival)
     private val tablero = Array(filas) { IntArray(columnas) { 0 } }
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var celdaSize = 0f
     private var radio = 0f
 
+    // Estado del Juego
     private var turnoJugador = 1
     private var juegoTerminado = false
     private var esMultijugador = false
     private var jugadorLocalID = 1
 
+    // Animación
     private var animFilaFinal = -1
     private var animColumnaFinal = -1
     private var animYActual = -1f
@@ -39,6 +42,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     private val DURACION_ANIM = 350L
     private var sonidoFicha: MediaPlayer? = null
 
+    // Sensores
     private var columnaSeleccionada = 3
     private var filtroAX = 0f
     private val alpha = 0.15f
@@ -51,6 +55,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     private val UMBRAL_NEUTRO = 1.2f
     private var gestoBloqueado = false
 
+    // Recursos
     private val prefs: SharedPreferences = context.getSharedPreferences("config", Context.MODE_PRIVATE)
     private var temaName: String = "Clasico"
     private var imagenRojaSrc: Bitmap? = null
@@ -58,6 +63,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     private var imagenRojaScaled: Bitmap? = null
     private var imagenNegraScaled: Bitmap? = null
 
+    // Stats
     private var movimientos1 = 0
     private var movimientos2 = 0
     private var inicioPartidaMs = 0L
@@ -71,6 +77,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         iniciarJuego()
     }
 
+    // Configuración para Multijugador y Solo
     fun configurarJugador(jugadorID: Int, esMultijugador: Boolean) {
         this.jugadorLocalID = jugadorID
         this.esMultijugador = esMultijugador
@@ -107,6 +114,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         super.onDraw(canvas)
         canvas.drawColor(Color.parseColor("#0044AA"))
 
+        // FICHA FANTASMA
         if (!juegoTerminado && isEnabled) {
             val cx = columnaSeleccionada * celdaSize + celdaSize / 2
             val cy = celdaSize / 2
@@ -129,11 +137,13 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
             }
         }
 
+        // TABLERO
         for (f in 0 until filas) {
             for (c in 0 until columnas) {
                 val cx = c * celdaSize + celdaSize / 2
                 val cy = f * celdaSize + celdaSize / 2 + celdaSize
                 val jugador = tablero[f][c]
+
                 if (temaName == "Clasico") {
                     dibujarFichaCanvas(canvas, cx, cy, jugador, ghost = false)
                 } else {
@@ -152,6 +162,7 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
             }
         }
 
+        // ANIMACIÓN
         if (animandoFicha) {
             val cx = animColumnaFinal * celdaSize + celdaSize / 2
             val cy = animYActual
@@ -228,36 +239,29 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     fun jugarFichaRemota(columna: Int) { post { soltarFicha(columna, esRemoto = true) } }
 
     // ================================================================
-    //  IA DEL BOT (Bot "Un poco más inteligente")
+    //  BOT INTELIGENTE
     // ================================================================
     fun jugarBotInteligente() {
         val botID = 2
         val humanoID = 1
 
-        // 1. ¿PUEDO GANAR YA? (Ofensiva)
-        // Buscamos si hay alguna columna donde poner mi ficha me de la victoria
+        // 1. Ofensiva
         for (col in 0 until columnas) {
             if (simularJugada(col, botID)) {
                 jugarFichaRemota(col)
                 return
             }
         }
-
-        // 2. ¿ME VAN A GANAR? (Defensiva)
-        // Buscamos si el humano ganaría poniendo ficha en alguna columna y lo bloqueamos
+        // 2. Defensiva
         for (col in 0 until columnas) {
             if (simularJugada(col, humanoID)) {
                 jugarFichaRemota(col)
                 return
             }
         }
-
-        // 3. ESTRATEGIA (Centro)
-        // Si no hay peligro inminente, preferimos el centro.
-        // Orden de preferencia: 3, 2, 4, 1, 5, 0, 6 (Centro hacia afuera)
+        // 3. Estrategia (Centro)
         val ordenPreferido = listOf(3, 2, 4, 1, 5, 0, 6)
         for (col in ordenPreferido) {
-            // Verificamos si la columna no está llena
             if (tablero[0][col] == 0) {
                 jugarFichaRemota(col)
                 return
@@ -265,12 +269,8 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         }
     }
 
-    // Devuelve true si el jugador ganaría jugando en esa columna
     private fun simularJugada(col: Int, idJugador: Int): Boolean {
-        // Verificar si la columna está llena
         if (tablero[0][col] != 0) return false
-
-        // Buscar la fila donde caería la ficha
         var filaCaida = -1
         for (f in filas - 1 downTo 0) {
             if (tablero[f][col] == 0) {
@@ -278,16 +278,11 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
                 break
             }
         }
-
         if (filaCaida == -1) return false
 
-        // Simular movimiento
         tablero[filaCaida][col] = idJugador
-        // Verificar si gana
         val gana = verificarVictoria(filaCaida, col)
-        // Deshacer movimiento (limpiar)
         tablero[filaCaida][col] = 0
-
         return gana
     }
 
@@ -307,8 +302,12 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
         anim.start()
     }
 
+    // --------------------------------------------------------------------------------
+    // CORRECCIÓN CRÍTICA AQUÍ: Añadido chequeo de 'juegoTerminado' al principio
+    // --------------------------------------------------------------------------------
     fun soltarFicha(columna: Int, esRemoto: Boolean) {
-        if (animandoFicha || columna !in 0 until columnas) return
+        if (juegoTerminado || animandoFicha || columna !in 0 until columnas) return
+
         for (f in filas - 1 downTo 0) {
             if (tablero[f][columna] == 0) {
                 if (!esRemoto) onFichaColocada?.invoke(columna)
@@ -362,13 +361,11 @@ class TableroView(context: Context, attrs: AttributeSet?) : View(context, attrs)
     private fun mostrarGanador(jugador: Int) {
         duracionPartidaMs = System.currentTimeMillis() - inicioPartidaMs
         val totalMovimientos = if (jugador == 1) movimientos1 else movimientos2
-        // Nombre para el record
         val nombre = if(esMultijugador) {
             if (jugador == jugadorLocalID) "Yo" else "Rival"
         } else {
             if (jugador == 1) "Jugador Humano" else "CPU"
         }
-
         RecordSubmitter.submitRecord(context, nombre, totalMovimientos + 1, duracionPartidaMs)
         onJuegoTerminado?.invoke(jugador, totalMovimientos + 1)
     }
